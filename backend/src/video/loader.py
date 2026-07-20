@@ -7,8 +7,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from core.exceptions import VideoLoaderError
-from core.video_metadata import VideoMetaData
+from src.core.exceptions import VideoLoaderError
+from src.core.video_metadata import VideoMetaData
 
 
 class VideoLoader:
