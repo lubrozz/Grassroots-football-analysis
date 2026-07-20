@@ -7,4 +7,4 @@ class VideoMetaData:
     height: int
     fps: float
     frame_count: int
-    duration_seconds: int
+    duration_seconds: float

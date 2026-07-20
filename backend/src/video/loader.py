@@ -62,7 +62,7 @@ class VideoLoader:
         height = int(self._capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         fps = self._capture.get(cv2.CAP_PROP_FPS)
         frame_count = int(self._capture.get(cv2.CAP_PROP_FRAME_COUNT))
-        duration = frame_count / fps if fps > 0 else 0
+        duration = frame_count / fps if fps > 0 else 0.0
 
         return VideoMetaData(
             width=width,
