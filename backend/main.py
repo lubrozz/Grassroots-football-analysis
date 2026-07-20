@@ -17,18 +17,18 @@ def main() -> None:
         print(f"Frames     : {metadata.frame_count}")
         print(f"Duration   : {metadata.duration_seconds:.2f} s")
 
-        frame_count = 0
+        frames_read = 0
 
         while True:
             frame = loader.read()
             if frame is None:
                 break
 
-            frame_count += 1
-        print(f"Frames read: {frame_count}")
+            frames_read += 1
+        print(f"Frames read: {frames_read}")
 
     finally:
-        loader.close
+        loader.close()
 
 
 if __name__ == "__main__":
