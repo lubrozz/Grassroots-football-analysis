@@ -10,7 +10,9 @@ class VideoPlayer:
     def __init__(self, loader: VideoLoader, window_name: str = "Video"):
         self._loader = loader
         self._window_name = window_name
-        self._playback_speed = 1.0  # Normal speed; can be adjusted for faster/slower playback.
+        self._playback_speed = (
+            1.0  # Normal speed; can be adjusted for faster/slower playback.
+        )
 
     # Public methods
     def play(self) -> None:
@@ -23,11 +25,13 @@ class VideoPlayer:
                 if frame is None:
                     break
 
-                self._draw_speed_label(frame)
+                self._draw_overlay_text(frame)
                 cv2.imshow(self._window_name, frame)
 
                 if base_frame_duration > 0:
-                    effective_frame_duration = base_frame_duration / self._playback_speed
+                    effective_frame_duration = (
+                        base_frame_duration / self._playback_speed
+                    )
                     next_frame_time += effective_frame_duration
                     sleep_time = next_frame_time - time.perf_counter()
 
@@ -39,7 +43,11 @@ class VideoPlayer:
 
                 key = cv2.waitKey(1) & 0xFF
 
-                if key in (ord("z"), ord("x"), ord("c")):  # 'z' to slow down, 'x' to normal, 'c' to speed up
+                if key in (
+                    ord("z"),
+                    ord("x"),
+                    ord("c"),
+                ):  # 'z' to slow down, 'x' to normal, 'c' to speed up
                     if key == ord("z"):
                         self._set_playback_speed(self._playback_speed * 0.5)
                     elif key == ord("x"):
@@ -49,7 +57,7 @@ class VideoPlayer:
 
                     # Resync scheduler right after changing speed.
                     next_frame_time = time.perf_counter()
-                
+
                 if key in (27, ord("q")):  # ESC or 'q' to quit
                     break
         finally:
@@ -72,35 +80,62 @@ class VideoPlayer:
         speed = max(0.25, min(speed, 4.0))  # Clamp speed between 0.25x and 4x
         self._playback_speed = speed
 
-    def _draw_speed_label(self, frame: np.ndarray) -> None:
-        label = f"Speed: {self._playback_speed:.2f}x"
+    def _draw_overlay_text(self, frame: np.ndarray) -> None:
+        lines = [
+            f"Speed: {self._playback_speed:.2f}x",
+            f"Controls: 'z' slow, 'x' normal, 'c' fast",
+            f"'q' or ESC to quit",
+        ]
         font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.4
+        font_scale = 0.5
         thickness = 1
-        color = (255, 255, 255)  # White
-        position = (20, 40)  # Top-left corner
+        text_color = (255, 255, 255)  # White
+        box_color = (0, 0, 0)  # Black background for better visibility
 
-        (text_width, text_height), baseline = cv2.getTextSize(label, font, font_scale, thickness)
-        # define padding around the text for better visibility
         padding_x = 10
         padding_y = 8
-        x = 10
-        y = 10
+        line_spacing = 5  # Space between lines
 
-        # Calculate the bounding box dimensions
-        box_w = text_width + (padding_x * 2)
-        box_h = text_height + baseline + (padding_y * 2)
+        # Calculate the size of the text box based on the lines of text
+        sizes = [cv2.getTextSize(line, font, font_scale, thickness) for line in lines]
+        max_text_width = max(size[0][0] for size in sizes)
+        total_text_height = sum(size[0][1] for size in sizes)
+        max_baseline = max(size[1] for size in sizes)
 
-        # Calculate the top-left and bottom-right coordinates of the rectangle
+        box_w = max_text_width + (padding_x * 2)
+        box_h = (
+            total_text_height
+            + line_spacing * (len(lines) - 1)
+            + max_baseline
+            + (padding_y * 2)
+        )
+        
+        frame_w = frame.shape[1]
+        margin = 10  # Margin from the edges of the frame
+        x = frame_w - box_w - margin
+        y = margin
+        x = max(0, x)
+
+        # Draw the background rectangle
         top_left = (x, y)
         bottom_right = (x + box_w, y + box_h)
+        cv2.rectangle(frame, top_left, bottom_right, box_color, -1)
 
-        # Calculate the position for the text to be drawn
         text_x = x + padding_x
-        text_y = y + padding_y + text_height
-        position = (text_x, text_y)
+        text_y = y + padding_y
 
-        # Draw the rectangle and the text on the frame
-        cv2.rectangle(frame, top_left, bottom_right, (0, 0, 0), -1)  # Background rectangle for better visibility
-        cv2.putText(frame, label, position, font, font_scale, color, thickness, cv2.LINE_AA)
-
+        # Draw each line of text
+        for i, line in enumerate(lines):
+            line_height = sizes[i][0][1]
+            text_y += line_height
+            cv2.putText(
+                frame,
+                line,
+                (text_x, text_y),
+                font,
+                font_scale,
+                text_color,
+                thickness,
+                cv2.LINE_AA,
+            )
+            text_y += line_spacing  # Add spacing after each line
