@@ -1,11 +1,13 @@
 from pathlib import Path
 
 from src.video.loader import VideoLoader
+from src.video.player import VideoPlayer
 
 
 def main() -> None:
     video_path = Path("data/input/veo-tracker-highlights-test.mp4")
     loader = VideoLoader(video_path)
+    player = VideoPlayer(loader)
 
     try:
         metadata = loader.metadata
@@ -17,17 +19,10 @@ def main() -> None:
         print(f"Frames     : {metadata.frame_count}")
         print(f"Duration   : {metadata.duration_seconds:.2f} s")
 
-        frames_read = 0
-
-        while True:
-            frame = loader.read()
-            if frame is None:
-                break
-
-            frames_read += 1
-        print(f"Frames read: {frames_read}")
+        player.play()
 
     finally:
+        player.close()
         loader.close()
 
 
