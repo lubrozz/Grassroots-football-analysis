@@ -21,21 +21,25 @@ class VideoPlayer:
         try:
             base_frame_duration = self._frame_duration_seconds()
             next_frame_time = time.perf_counter()
+            
+            frame_index = 0
 
             while True:
                 frame = self._loader.read()
+                frame_index += 1
                 if frame is None:
                     break
                 
+                moving_x = 100 + (frame_index % 300)
                 test_detections = [
                     Detection(
                         class_id=0,
                         confidence=0.99,
-                        bounding_box=BoundingBox(x=100, y=120, width=220, height=300),
+                        bounding_box=BoundingBox(x=moving_x, y=120, width=220, height=300),
                     )
                 ]
                 
-                self._draw_detections(frame, test_detections) # Draw test detections on the frame
+                self._draw_detections(frame, test_detections, frame_index) # Draw test detections on the frame
                 self._draw_overlay_text(frame) # Draw control-overlay text on the frame
                 cv2.imshow(self._window_name, frame)
 
@@ -78,7 +82,7 @@ class VideoPlayer:
         cv2.destroyAllWindows()
 
     # Private helpers
-    def _draw_detections(self, frame: np.ndarray, detections: list[Detection]) -> None:
+    def _draw_detections(self, frame: np.ndarray, detections: list[Detection], frame_index: int) -> None:
         for detection in detections:
             bbox = detection.bounding_box
             x1 = int(bbox.x)
@@ -88,7 +92,7 @@ class VideoPlayer:
             
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2) # Draw bounding box in red
             
-            label = f"id:{detection.class_id}, conf:{detection.confidence:.2f}" # Create label text with id and confidence
+            label = f"id:{detection.class_id}, conf:{detection.confidence:.2f}, frame:{frame_index}" # Create label text with id, confidence, and frame index
             label_y = max(15, y1 - 8) # Position label above the bounding box, ensuring it doesn't go off-screen
             cv2.putText(frame, label, (x1, label_y), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA) # Draw label text in red
     
