@@ -3,6 +3,8 @@ import time
 import numpy as np
 
 from src.video.loader import VideoLoader
+from src.core.video_detection import Detection
+from src.core.video_boundingBox import BoundingBox
 
 
 class VideoPlayer:
@@ -24,8 +26,17 @@ class VideoPlayer:
                 frame = self._loader.read()
                 if frame is None:
                     break
-
-                self._draw_overlay_text(frame)
+                
+                test_detections = [
+                    Detection(
+                        class_id=0,
+                        confidence=0.99,
+                        bounding_box=BoundingBox(x=100, y=120, width=220, height=300),
+                    )
+                ]
+                
+                self._draw_detections(frame, test_detections) # Draw test detections on the frame
+                self._draw_overlay_text(frame) # Draw control-overlay text on the frame
                 cv2.imshow(self._window_name, frame)
 
                 if base_frame_duration > 0:
@@ -67,6 +78,21 @@ class VideoPlayer:
         cv2.destroyAllWindows()
 
     # Private helpers
+    def _draw_detections(self, frame: np.ndarray, detections: list[Detection]) -> None:
+        for detection in detections:
+            bbox = detection.bounding_box
+            x1 = int(bbox.x)
+            y1 = int(bbox.y)
+            x2 = int(bbox.x + bbox.width)
+            y2 = int(bbox.y + bbox.height)
+            
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2) # Draw bounding box in red
+            
+            label = f"id:{detection.class_id}, conf:{detection.confidence:.2f}" # Create label text with id and confidence
+            label_y = max(15, y1 - 8) # Position label above the bounding box, ensuring it doesn't go off-screen
+            cv2.putText(frame, label, (x1, label_y), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA) # Draw label text in red
+    
+    
     def _frame_duration_seconds(self) -> float:
         fps = self._loader.metadata.fps
         if fps <= 0:
