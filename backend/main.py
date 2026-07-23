@@ -2,12 +2,14 @@ from pathlib import Path
 
 from src.video.loader import VideoLoader
 from src.video.player import VideoPlayer
+from src.detection.yolo_detector import YoloDetector
 
 
 def main() -> None:
     video_path = Path("data/input/veo-tracker-highlights-test.mp4")
     loader = VideoLoader(video_path)
-    player = VideoPlayer(loader)
+    detector = YoloDetector()  # Initialize the YOLO detector
+    player = VideoPlayer(loader, detector = detector)
 
     try:
         metadata = loader.metadata

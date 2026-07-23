@@ -5,12 +5,14 @@ import numpy as np
 from src.video.loader import VideoLoader
 from src.core.video_detection import Detection
 from src.core.video_boundingBox import BoundingBox
+from src.detection.yolo_detector import YoloDetector
 
 
 class VideoPlayer:
     # Constructor
-    def __init__(self, loader: VideoLoader, window_name: str = "Video"):
+    def __init__(self, loader: VideoLoader, detector: YoloDetector | None, window_name: str = "Video"):
         self._loader = loader
+        self._detector = detector
         self._window_name = window_name
         self._playback_speed = (
             1.0  # Normal speed; can be adjusted for faster/slower playback.
@@ -21,7 +23,7 @@ class VideoPlayer:
         try:
             base_frame_duration = self._frame_duration_seconds()
             next_frame_time = time.perf_counter()
-            
+
             frame_index = 0
 
             while True:
@@ -30,16 +32,24 @@ class VideoPlayer:
                 if frame is None:
                     break
                 
-                moving_x = 100 + (frame_index % 300)
-                test_detections = [
-                    Detection(
-                        class_id=0,
-                        confidence=0.99,
-                        bounding_box=BoundingBox(x=moving_x, y=120, width=220, height=300),
-                    )
-                ]
-                
-                self._draw_detections(frame, test_detections, frame_index) # Draw test detections on the frame
+                detections: list[Detection] = []
+                if self._detector is None:
+                    detections = []
+                else:
+                    detections = self._detector.detect(frame)
+
+                # moving_x = 100 + (frame_index % 300)
+                # test_detections = [
+                #     Detection(
+                #         class_id=0,
+                #         confidence=0.99,
+                #         bounding_box=BoundingBox(
+                #             x=moving_x, y=120, width=220, height=300
+                #         ),
+                #     )
+                # ]
+
+                self._draw_detections(frame, detections, frame_index) # Draw actual detections on the frame
                 self._draw_overlay_text(frame) # Draw control-overlay text on the frame
                 cv2.imshow(self._window_name, frame)
 
@@ -89,14 +99,13 @@ class VideoPlayer:
             y1 = int(bbox.y)
             x2 = int(bbox.x + bbox.width)
             y2 = int(bbox.y + bbox.height)
-            
+
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2) # Draw bounding box in red
-            
+
             label = f"id:{detection.class_id}, conf:{detection.confidence:.2f}, frame:{frame_index}" # Create label text with id, confidence, and frame index
             label_y = max(15, y1 - 8) # Position label above the bounding box, ensuring it doesn't go off-screen
             cv2.putText(frame, label, (x1, label_y), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA) # Draw label text in red
-    
-    
+
     def _frame_duration_seconds(self) -> float:
         fps = self._loader.metadata.fps
         if fps <= 0:
@@ -139,7 +148,7 @@ class VideoPlayer:
             + max_baseline
             + (padding_y * 2)
         )
-        
+
         frame_w = frame.shape[1]
         margin = 10  # Margin from the edges of the frame
         x = frame_w - box_w - margin
