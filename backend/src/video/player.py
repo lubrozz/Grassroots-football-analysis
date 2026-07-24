@@ -4,7 +4,6 @@ import numpy as np
 
 from src.video.loader import VideoLoader
 from src.core.video_detection import Detection
-from src.core.video_boundingBox import BoundingBox
 from src.detection.yolo_detector import YoloDetector
 
 
@@ -17,6 +16,8 @@ class VideoPlayer:
         self._playback_speed = (
             1.0  # Normal speed; can be adjusted for faster/slower playback.
         )
+        self._detect_every_n_frames = 4  # How often to run detection (every n frames). Adjust as needed.
+        self._cached_detections: list[Detection] = []  # Cache detections to avoid re-running detection on every frame.
 
     # Public methods
     def play(self) -> None:
@@ -34,9 +35,16 @@ class VideoPlayer:
                 
                 detections: list[Detection] = []
                 if self._detector is None:
-                    detections = []
+                    self._cached_detections = []  # Clear cached detections if no detector is provided
                 else:
-                    detections = self._detector.detect(frame)
+                    should_detect_now = (
+                        frame_index == 1
+                        or frame_index % self._detect_every_n_frames == 0
+                    )
+                    if should_detect_now:
+                        self._cached_detections = self._detector.detect(frame)
+                
+                detections = self._cached_detections
 
                 # moving_x = 100 + (frame_index % 300)
                 # test_detections = [
@@ -49,7 +57,7 @@ class VideoPlayer:
                 #     )
                 # ]
 
-                self._draw_detections(frame, detections, frame_index) # Draw actual detections on the frame
+                self._draw_detections(frame, detections) # Draw actual detections on the frame
                 self._draw_overlay_text(frame) # Draw control-overlay text on the frame
                 cv2.imshow(self._window_name, frame)
 
@@ -92,7 +100,7 @@ class VideoPlayer:
         cv2.destroyAllWindows()
 
     # Private helpers
-    def _draw_detections(self, frame: np.ndarray, detections: list[Detection], frame_index: int) -> None:
+    def _draw_detections(self, frame: np.ndarray, detections: list[Detection]) -> None:
         for detection in detections:
             bbox = detection.bounding_box
             x1 = int(bbox.x)
@@ -102,9 +110,12 @@ class VideoPlayer:
 
             cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2) # Draw bounding box in red
 
-            label = f"id:{detection.class_id}, conf:{detection.confidence:.2f}, frame:{frame_index}" # Create label text with id, confidence, and frame index
+            #label = f"id:{detection.class_id}, conf:{detection.confidence:.2f}" # Create label text with id, confidence
             label_y = max(15, y1 - 8) # Position label above the bounding box, ensuring it doesn't go off-screen
-            cv2.putText(frame, label, (x1, label_y), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA) # Draw label text in red
+            
+            if detection.class_id == 32:
+                label = f"id:{detection.class_id}, conf:{detection.confidence:.2f}" # Create label text with id, confidence
+                cv2.putText(frame, label, (x1, label_y), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA) # Draw label text in red
 
     def _frame_duration_seconds(self) -> float:
         fps = self._loader.metadata.fps
