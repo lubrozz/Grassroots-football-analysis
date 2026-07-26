@@ -1,5 +1,7 @@
 from dataclasses import dataclass
+
 from .video_boundingBox import BoundingBox
+
 
 @dataclass(frozen=True)  # frozen=True makes object immutable.
 class Detection:

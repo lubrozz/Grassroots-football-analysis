@@ -1,9 +1,6 @@
 import numpy as np
-from ultralytics import YOLO
-from ultralytics.engine.results import Results
-
 from src.core.video_detection import Detection
-from src.core.video_boundingBox import BoundingBox
+
 
 class DetectionBase:
     def detect(self, frame: np.ndarray) -> list[Detection]:
@@ -16,6 +13,6 @@ class DetectionBase:
         Returns:
             list[Detection]: A list of detected objects in the frame.
         """
-        
+
         # Placeholder implementation; replace with actual detection logic.
-        return [] 
+        return []
