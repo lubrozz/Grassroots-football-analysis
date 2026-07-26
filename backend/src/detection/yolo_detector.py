@@ -10,15 +10,9 @@ from backend.src.core.detection_class import DetectionClass
 
 class YoloDetector:
     def __init__(self):
-        self._model = YOLO(
-            settings.YOLO_MODEL
-        )  # Load a pre-trained YOLO model (optionally use yolov8s.pt for better accuracy)
-        self._person_confidence_threshold = (
-            settings.PERSON_CONFIDENCE_THRESHOLD
-        )  # Set a confidence threshold for detections
-        self._ball_confidence_threshold = (
-            settings.BALL_CONFIDENCE_THRESHOLD
-        )  # Set a confidence threshold for ball detections
+        self._model = YOLO(settings.YOLO_MODEL)
+        self._person_confidence_threshold = settings.PERSON_CONFIDENCE_THRESHOLD
+        self._ball_confidence_threshold = settings.BALL_CONFIDENCE_THRESHOLD
 
     def detect(self, frame: np.ndarray) -> list[Detection]:
         model_results = list(
@@ -48,11 +42,11 @@ class YoloDetector:
 
         detections: list[Detection] = []
         for box in first.boxes:
-            class_id = int(box.cls.item())  # Get class ID
+            class_id = int(box.cls.item())
             if class_id not in (
                 DetectionClass.SPORTS_BALL,
                 DetectionClass.PERSON,
-            ):  # Only consider class IDs 0 (person) and 32 (sports ball)
+            ):
                 continue  # Skip other classes
 
             confidence = float(box.conf.item())  # Get confidence score
