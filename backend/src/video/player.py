@@ -1,129 +1,74 @@
-import cv2
 import time
-import numpy as np
 
-from src.video.loader import VideoLoader
-from src.core.video_detection import Detection
-from src.detection.yolo_detector import YoloDetector
+import cv2
+import numpy as np
 
 
 class VideoPlayer:
     # Constructor
-    def __init__(self, loader: VideoLoader, detector: YoloDetector | None, window_name: str = "Video"):
-        self._loader = loader
-        self._detector = detector
+    def __init__(
+        self,
+        fps: float,
+        window_name: str = "Video",
+    ):
         self._window_name = window_name
         self._playback_speed = (
             1.0  # Normal speed; can be adjusted for faster/slower playback.
         )
-        self._detect_every_n_frames = 4  # How often to run detection (every n frames). Adjust as needed.
-        self._cached_detections: list[Detection] = []  # Cache detections to avoid re-running detection on every frame.
+        self._base_frame_duration = (1.0 / fps) if fps > 0 else 0.0
+        self._next_frame_time = time.perf_counter()
 
     # Public methods
-    def play(self) -> None:
-        try:
-            base_frame_duration = self._frame_duration_seconds()
-            next_frame_time = time.perf_counter()
+    def show(self, frame: np.ndarray) -> bool:
+        display_frame = (
+            frame.copy()
+        )  # Create a copy to avoid modifying the original frame
 
-            frame_index = 0
+        self._draw_overlay_text(display_frame)  # Draw control-overlay text on the frame
 
-            while True:
-                frame = self._loader.read()
-                frame_index += 1
-                if frame is None:
-                    break
-                
-                detections: list[Detection] = []
-                if self._detector is None:
-                    self._cached_detections = []  # Clear cached detections if no detector is provided
-                else:
-                    should_detect_now = (
-                        frame_index == 1
-                        or frame_index % self._detect_every_n_frames == 0
-                    )
-                    if should_detect_now:
-                        self._cached_detections = self._detector.detect(frame)
-                
-                detections = self._cached_detections
+        cv2.imshow(self._window_name, display_frame)
 
-                # moving_x = 100 + (frame_index % 300)
-                # test_detections = [
-                #     Detection(
-                #         class_id=0,
-                #         confidence=0.99,
-                #         bounding_box=BoundingBox(
-                #             x=moving_x, y=120, width=220, height=300
-                #         ),
-                #     )
-                # ]
+        if self._base_frame_duration > 0:
+            effective_frame_duration = self._base_frame_duration / self._playback_speed
 
-                self._draw_detections(frame, detections) # Draw actual detections on the frame
-                self._draw_overlay_text(frame) # Draw control-overlay text on the frame
-                cv2.imshow(self._window_name, frame)
+            self._next_frame_time += effective_frame_duration
+            sleep_time = self._next_frame_time - time.perf_counter()
 
-                if base_frame_duration > 0:
-                    effective_frame_duration = (
-                        base_frame_duration / self._playback_speed
-                    )
-                    next_frame_time += effective_frame_duration
-                    sleep_time = next_frame_time - time.perf_counter()
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+            else:
+                # If decoding/rendering falls behind, resync to avoid drift.
+                self._next_frame_time = time.perf_counter()
 
-                    if sleep_time > 0:
-                        time.sleep(sleep_time)
-                    else:
-                        # If decoding/rendering falls behind, resync to avoid drift.
-                        next_frame_time = time.perf_counter()
+        key = cv2.waitKey(1) & 0xFF
 
-                key = cv2.waitKey(1) & 0xFF
+        if key in (
+            ord("z"),
+            ord("x"),
+            ord("c"),
+        ):  # 'z' to slow down, 'x' to normal, 'c' to speed up
+            if key == ord("z"):
+                self._set_playback_speed(self._playback_speed * 0.5)
+            elif key == ord("x"):
+                self._set_playback_speed(1.0)
+            elif key == ord("c"):
+                self._set_playback_speed(self._playback_speed * 2.0)
 
-                if key in (
-                    ord("z"),
-                    ord("x"),
-                    ord("c"),
-                ):  # 'z' to slow down, 'x' to normal, 'c' to speed up
-                    if key == ord("z"):
-                        self._set_playback_speed(self._playback_speed * 0.5)
-                    elif key == ord("x"):
-                        self._set_playback_speed(1.0)
-                    elif key == ord("c"):
-                        self._set_playback_speed(self._playback_speed * 2.0)
+            # Resync scheduler right after changing speed.
+            self._next_frame_time = time.perf_counter()
 
-                    # Resync scheduler right after changing speed.
-                    next_frame_time = time.perf_counter()
+        if key in (27, ord("q")):  # ESC or 'q' to quit
+            return False
 
-                if key in (27, ord("q")):  # ESC or 'q' to quit
-                    break
-        finally:
-            self.close()
+        return True  # Continue playback
 
     def close(self) -> None:
         cv2.destroyAllWindows()
 
+    def reset(self) -> None:
+        self._next_frame_time = time.perf_counter()
+
     # Private helpers
-    def _draw_detections(self, frame: np.ndarray, detections: list[Detection]) -> None:
-        for detection in detections:
-            bbox = detection.bounding_box
-            x1 = int(bbox.x)
-            y1 = int(bbox.y)
-            x2 = int(bbox.x + bbox.width)
-            y2 = int(bbox.y + bbox.height)
-
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2) # Draw bounding box in red
-
-            #label = f"id:{detection.class_id}, conf:{detection.confidence:.2f}" # Create label text with id, confidence
-            label_y = max(15, y1 - 8) # Position label above the bounding box, ensuring it doesn't go off-screen
-            
-            if detection.class_id == 32:
-                label = f"id:{detection.class_id}, conf:{detection.confidence:.2f}" # Create label text with id, confidence
-                cv2.putText(frame, label, (x1, label_y), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA) # Draw label text in red
-
-    def _frame_duration_seconds(self) -> float:
-        fps = self._loader.metadata.fps
-        if fps <= 0:
-            return 0.0
-
-        return 1.0 / fps
-
     def _set_playback_speed(self, speed: float) -> None:
         if speed <= 0:
             raise ValueError("Playback speed must be positive.")
@@ -133,8 +78,8 @@ class VideoPlayer:
     def _draw_overlay_text(self, frame: np.ndarray) -> None:
         lines = [
             f"Speed: {self._playback_speed:.2f}x",
-            f"Controls: 'z' slow, 'x' normal, 'c' fast",
-            f"'q' or ESC to quit",
+            "Controls: 'z' slow, 'x' normal, 'c' fast",
+            "'q' or ESC to quit",
         ]
         font = cv2.FONT_HERSHEY_SIMPLEX
         font_scale = 0.5
