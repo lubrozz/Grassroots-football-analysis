@@ -10,13 +10,23 @@ class VideoPlayer:
         self,
         fps: float,
         window_name: str = "Video",
+        max_display_width: int | None = None,
+        max_display_height: int | None = None,
+        resizable: bool = True,
     ):
         self._window_name = window_name
         self._playback_speed = (
-            1.0  # Normal speed; can be adjusted for faster/slower playback.
+            1.0  # Normal speed; can be adjusted to 0.5x, 2x, etc. using controls
         )
         self._base_frame_duration = (1.0 / fps) if fps > 0 else 0.0
         self._next_frame_time = time.perf_counter()
+        self._max_display_width = max_display_width
+        self._max_display_height = max_display_height
+        self._resizable = resizable
+        if self._resizable:
+            cv2.namedWindow(self._window_name, cv2.WINDOW_NORMAL)
+        else:
+            cv2.namedWindow(self._window_name, cv2.WINDOW_AUTOSIZE)
 
     # Public methods
     def show(self, frame: np.ndarray) -> bool:
@@ -25,7 +35,9 @@ class VideoPlayer:
         )  # Create a copy to avoid modifying the original frame
 
         self._draw_overlay_text(display_frame)  # Draw control-overlay text on the frame
-
+        self._ensure_display_size(
+            display_frame
+        )  # Ensure the display window is appropriately sized
         cv2.imshow(self._window_name, display_frame)
 
         if self._base_frame_duration > 0:
@@ -74,6 +86,18 @@ class VideoPlayer:
             raise ValueError("Playback speed must be positive.")
         speed = max(0.25, min(speed, 4.0))  # Clamp speed between 0.25x and 4x
         self._playback_speed = speed
+
+    def _ensure_display_size(self, frame: np.ndarray) -> None:
+        max_w = self._max_display_width
+        frame_w = frame.shape[1]
+        max_h = self._max_display_height
+        frame_h = frame.shape[0]
+        scale = min(
+            max_w / frame_w, max_h / frame_h, 1.0
+        )  # Scale down if needed, but never scale up
+        new_w = int(frame_w * scale)
+        new_h = int(frame_h * scale)
+        cv2.resizeWindow(self._window_name, new_w, new_h)
 
     def _draw_overlay_text(self, frame: np.ndarray) -> None:
         lines = [

@@ -33,3 +33,6 @@ BALL_CONFIDENCE_THRESHOLD = 0.05  # Set a confidence threshold for ball detectio
 #
 
 DEFAULT_WINDOW_NAME = "Football Analysis"
+DISPLAY_MAX_WIDTH = 1280
+DISPLAY_MAX_HEIGHT = 720
+DISPLAY_RESIZABLE = True
