@@ -30,9 +30,7 @@ class VideoPlayer:
 
     # Public methods
     def show(self, frame: np.ndarray) -> bool:
-        display_frame = (
-            frame.copy()
-        )  # Create a copy to avoid modifying the original frame
+        self._draw_overlay_text(frame)  # Draw control-overlay text on the frame
 
         self._draw_overlay_text(display_frame)  # Draw control-overlay text on the frame
         self._ensure_display_size(
