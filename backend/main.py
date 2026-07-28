@@ -3,8 +3,9 @@ from pathlib import Path
 from src.detection.yolo_detector import YoloDetector
 from src.video.loader import VideoLoader
 from src.video.player import VideoPlayer
+from src.config import settings
 
-from backend.src.video.annotator import FrameAnnotator
+from src.video.annotator import FrameAnnotator
 
 
 def main() -> None:
@@ -12,7 +13,12 @@ def main() -> None:
     loader = VideoLoader(video_path)
     detector = YoloDetector()  # Initialize the YOLO detector
     annotator = FrameAnnotator()  # Initialize the frame annotator
-    player = VideoPlayer(loader.metadata.fps)
+    player = VideoPlayer(
+        loader.metadata.fps,
+        window_name="Football Analysis",
+        max_display_width=settings.DISPLAY_MAX_WIDTH,
+        max_display_height=settings.DISPLAY_MAX_HEIGHT,
+    )  # Initialize the video player
 
     try:
         while True:
