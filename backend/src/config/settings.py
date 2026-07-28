@@ -17,9 +17,7 @@ MODEL_DIR = PROJECT_ROOT / "models"
 # YOLO
 #
 
-YOLO_MODEL = (
-    MODEL_DIR / "yolo8n.pt"
-)  # Load a pre-trained YOLO model(optionally use yolov8s.pt for better accuracy)
+YOLO_MODEL = MODEL_DIR / "yolov8n.pt" # Load a pre-trained YOLO model(optionally use yolov8s.pt for better accuracy)
 
 YOLO_IMAGE_SIZE = 1280
 
