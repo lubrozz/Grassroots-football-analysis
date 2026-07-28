@@ -17,12 +17,8 @@ class FrameAnnotator:
         """
         annotated = frame.copy()  # Create a copy of the frame to annotate
 
-        for detection in detections:
-            self._draw_detection(
-                annotated, detection
-            )  # Draw each detection on the frame
+        self._draw_detections(annotated, detections)  # Draw each detection on the frame
 
-        # Placeholder implementation; replace with actual annotation logic.
         return annotated
 
     # Private methods

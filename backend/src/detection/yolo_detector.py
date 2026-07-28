@@ -5,7 +5,7 @@ from src.core.video_detection import Detection
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
 
-from backend.src.core.detection_class import DetectionClass
+from src.core.detection_class import DetectionClass
 
 
 class YoloDetector:
