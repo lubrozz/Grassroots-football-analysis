@@ -32,11 +32,11 @@ class VideoPlayer:
     def show(self, frame: np.ndarray) -> bool:
         self._draw_overlay_text(frame)  # Draw control-overlay text on the frame
 
-        self._draw_overlay_text(display_frame)  # Draw control-overlay text on the frame
+        self._draw_overlay_text(frame)  # Draw control-overlay text on the frame
         self._ensure_display_size(
-            display_frame
+            frame
         )  # Ensure the display window is appropriately sized
-        cv2.imshow(self._window_name, display_frame)
+        cv2.imshow(self._window_name, frame)  # Show the frame in the window
 
         if self._base_frame_duration > 0:
             effective_frame_duration = self._base_frame_duration / self._playback_speed
