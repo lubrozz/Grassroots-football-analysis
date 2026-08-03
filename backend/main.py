@@ -12,10 +12,12 @@ def main() -> None:
     video_path = Path("data/input/veo-tracker-highlights-test.mp4")
     loader = VideoLoader(video_path)
     detector = YoloDetector()  # Initialize the YOLO detector
-    tracker = ByteTracker()  # Initialize the ByteTracker for tracking
+    tracker = ByteTracker(
+        frame_rate=loader.metadata.fps
+    )  # Initialize the ByteTracker for tracking
     annotator = FrameAnnotator()  # Initialize the frame annotator
     player = VideoPlayer(
-        loader.metadata.fps,
+        frame_rate=loader.metadata.fps,
         window_name="Football Analysis",
         max_display_width=settings.DISPLAY_MAX_WIDTH,
         max_display_height=settings.DISPLAY_MAX_HEIGHT,

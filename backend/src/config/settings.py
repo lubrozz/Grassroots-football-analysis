@@ -17,7 +17,9 @@ MODEL_DIR = PROJECT_ROOT / "models"
 # YOLO
 #
 
-YOLO_MODEL = MODEL_DIR / "yolov8n.pt" # Load a pre-trained YOLO model(optionally use yolov8s.pt for better accuracy)
+YOLO_MODEL = (
+    MODEL_DIR / "yolov8n.pt"
+)  # Load a pre-trained YOLO model(optionally use yolov8s.pt for better accuracy)
 
 YOLO_IMAGE_SIZE = 1280
 
@@ -31,6 +33,6 @@ BALL_CONFIDENCE_THRESHOLD = 0.05  # Set a confidence threshold for ball detectio
 #
 
 DEFAULT_WINDOW_NAME = "Football Analysis"
-DISPLAY_MAX_WIDTH = 1280
-DISPLAY_MAX_HEIGHT = 720
+DISPLAY_MAX_WIDTH = 1920
+DISPLAY_MAX_HEIGHT = 1080
 DISPLAY_RESIZABLE = True

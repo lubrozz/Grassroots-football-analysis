@@ -7,9 +7,9 @@ from supervision.tracker.byte_tracker.core import ByteTrack
 
 
 class ByteTracker:
-    def __init__(self):
+    def __init__(self, frame_rate: float):
         # Initialize the tracker state here
-        self._tracker = ByteTrack()
+        self._tracker = ByteTrack(frame_rate=frame_rate)
 
     def update(self, detections: list[Detection]) -> list[Track]:
         """
@@ -28,12 +28,21 @@ class ByteTracker:
 
         tracked_detections = self._tracker.update_with_detections(sv_detections)
 
-        # print(tracked_detections)
-        # print(type(tracked_detections))
-        # print(tracked_detections.xyxy)
-        # print(tracked_detections.confidence)
-        # print(tracked_detections.class_id)
-        # print(tracked_detections.tracker_id)
+        assert tracked_detections.tracker_id is not None
+        assert tracked_detections.confidence is not None
+
+        for tracker_id, confidence, xyxy in zip(
+            tracked_detections.tracker_id,
+            tracked_detections.confidence,
+            tracked_detections.xyxy,
+        ):
+            if tracker_id in (54, 105, 184):
+                print(
+                    f"#{tracker_id} "
+                    f"conf={confidence:.2f} "
+                    f"w={xyxy[2] - xyxy[0]:.1f} "
+                    f"h={xyxy[3] - xyxy[1]:.1f}"
+                )
 
         return self._to_tracks(tracked_detections)
 
