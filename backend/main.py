@@ -1,17 +1,17 @@
 from pathlib import Path
 
+from src.config import settings
 from src.detection.yolo_detector import YoloDetector
+from src.video.annotator import FrameAnnotator
 from src.video.loader import VideoLoader
 from src.video.player import VideoPlayer
-from src.config import settings
-
-from src.video.annotator import FrameAnnotator
 
 
 def main() -> None:
     video_path = Path("data/input/veo-tracker-highlights-test.mp4")
     loader = VideoLoader(video_path)
     detector = YoloDetector()  # Initialize the YOLO detector
+    tracker = ByteTracker()  # Initialize the ByteTracker for tracking
     annotator = FrameAnnotator()  # Initialize the frame annotator
     player = VideoPlayer(
         loader.metadata.fps,
@@ -29,9 +29,11 @@ def main() -> None:
 
             detections = detector.detect(frame)  # Run detection on the frame
 
-            annotated_frame = annotator.annotate(
-                frame, detections
-            )  # Annotate the frame
+            tracks = tracker.update(
+                detections
+            )  # Update the tracker with the new detections
+
+            annotated_frame = annotator.annotate(frame, tracks)  # Annotate the frame
 
             if not player.show(annotated_frame):  # Show the annotated frame
                 break  # Exit if the user closes the window or presses a key
