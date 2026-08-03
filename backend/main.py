@@ -30,9 +30,7 @@ def main() -> None:
 
             detections = detector.detect(frame)  # Run detection on the frame
 
-            # tracks = tracker.update(
-            #     detections
-            # )  # Update the tracker with the new detections
+            tracker.update(detections)  # Update the tracker with the new detections
 
             annotated_frame = annotator.annotate(
                 frame, detections
