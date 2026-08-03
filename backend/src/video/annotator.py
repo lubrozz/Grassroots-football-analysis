@@ -1,30 +1,30 @@
 import cv2
 import numpy as np
-from src.core.video_detection import Detection
+from src.core.video_track import Track
 
 
 class FrameAnnotator:
-    def annotate(self, frame: np.ndarray, detections: list[Detection]) -> np.ndarray:
+    def annotate(self, frame: np.ndarray, tracks: list[Track]) -> np.ndarray:
         """
-        Annotates the given video frame with the provided detections.
+        Annotates the given video frame with the provided tracks.
 
         Args:
             frame (np.ndarray): The video frame to annotate.
-            detections (list[Detection]): A list of detected objects to annotate on the frame.
+            tracks (list[Track]): A list of tracked objects to annotate on the frame.
 
         Returns:
             np.ndarray: The annotated video frame.
         """
         annotated = frame.copy()  # Create a copy of the frame to annotate
 
-        self._draw_detections(annotated, detections)  # Draw each detection on the frame
+        self._draw_tracks(annotated, tracks)  # Draw each track on the frame
 
         return annotated
 
     # Private methods
-    def _draw_detections(self, frame: np.ndarray, detections: list[Detection]) -> None:
-        for detection in detections:
-            bbox = detection.bounding_box
+    def _draw_tracks(self, frame: np.ndarray, tracks: list[Track]) -> None:
+        for track in tracks:
+            bbox = track.bounding_box
             x1 = int(bbox.x)
             y1 = int(bbox.y)
             x2 = int(bbox.x + bbox.width)
@@ -34,13 +34,12 @@ class FrameAnnotator:
                 frame, (x1, y1), (x2, y2), (0, 0, 255), 2
             )  # Draw bounding box in red
 
-            # label = f"id:{detection.class_id}, conf:{detection.confidence:.2f}" # Create label text with id, confidence
             label_y = max(
                 15, y1 - 8
             )  # Position label above the bounding box, ensuring it doesn't go off-screen
 
-            if detection.class_id == 32:
-                label = f"id:{detection.class_id}, conf:{detection.confidence:.2f}"  # Create label text with id, confidence
+            if track.class_id == 0:
+                label = f"player_id: #{track.id}, conf:{track.confidence:.2f}"  # Create label text with id, confidence
                 cv2.putText(
                     frame,
                     label,

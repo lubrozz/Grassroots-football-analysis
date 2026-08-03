@@ -30,11 +30,11 @@ def main() -> None:
 
             detections = detector.detect(frame)  # Run detection on the frame
 
-            tracker.update(detections)  # Update the tracker with the new detections
+            tracks = tracker.update(
+                detections
+            )  # Update the tracker with the new detections
 
-            annotated_frame = annotator.annotate(
-                frame, detections
-            )  # Annotate the frame
+            annotated_frame = annotator.annotate(frame, tracks)  # Annotate the frame
 
             if not player.show(annotated_frame):  # Show the annotated frame
                 break  # Exit if the user closes the window or presses a key
