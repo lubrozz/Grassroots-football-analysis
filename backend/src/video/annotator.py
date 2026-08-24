@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from src.core.detection_class import DetectionClass
 from src.core.video_track import Track
 
 
@@ -38,7 +39,7 @@ class FrameAnnotator:
                 15, y1 - 8
             )  # Position label above the bounding box, ensuring it doesn't go off-screen
 
-            if track.class_id == 0:
+            if track.class_id == DetectionClass.PERSON:
                 label = f"player_id: #{track.id}, conf:{track.confidence:.2f}"  # Create label text with id, confidence
                 cv2.putText(
                     frame,
@@ -50,3 +51,16 @@ class FrameAnnotator:
                     1,
                     cv2.LINE_AA,
                 )  # Draw label text in red
+
+            if track.class_id == DetectionClass.SPORTS_BALL:
+                label = f"ball_id: #{track.id}, conf:{track.confidence:.2f}"  # Create label text with id, confidence
+                cv2.putText(
+                    frame,
+                    label,
+                    (x1, label_y),
+                    cv2.FONT_HERSHEY_COMPLEX,
+                    0.5,
+                    (255, 0, 255),
+                    1,
+                    cv2.LINE_AA,
+                )  # Draw label text in purple

@@ -31,18 +31,18 @@ class ByteTracker:
         assert tracked_detections.tracker_id is not None
         assert tracked_detections.confidence is not None
 
-        for tracker_id, confidence, xyxy in zip(
-            tracked_detections.tracker_id,
-            tracked_detections.confidence,
-            tracked_detections.xyxy,
-        ):
-            if tracker_id in (54, 105, 184):
-                print(
-                    f"#{tracker_id} "
-                    f"conf={confidence:.2f} "
-                    f"w={xyxy[2] - xyxy[0]:.1f} "
-                    f"h={xyxy[3] - xyxy[1]:.1f}"
-                )
+        # for tracker_id, confidence, xyxy in zip(
+        #     tracked_detections.tracker_id,
+        #     tracked_detections.confidence,
+        #     tracked_detections.xyxy,
+        # ):
+        #     if tracker_id in (54, 105, 184):
+        #         print(
+        #             f"#{tracker_id} "
+        #             f"conf={confidence:.2f} "
+        #             f"w={xyxy[2] - xyxy[0]:.1f} "
+        #             f"h={xyxy[3] - xyxy[1]:.1f}"
+        #         )
 
         return self._to_tracks(tracked_detections)
 

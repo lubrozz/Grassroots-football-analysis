@@ -26,7 +26,7 @@ YOLO_IMAGE_SIZE = 1280
 YOLO_MAX_DETECTIONS = 60
 
 PERSON_CONFIDENCE_THRESHOLD = 0.28  # Set a confidence threshold for detections
-BALL_CONFIDENCE_THRESHOLD = 0.05  # Set a confidence threshold for ball detections
+BALL_CONFIDENCE_THRESHOLD = 0.02  # Set a confidence threshold for ball detections
 
 #
 # Video
