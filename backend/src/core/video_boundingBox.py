@@ -7,3 +7,11 @@ class BoundingBox:
     y: float
     width: float
     height: float
+
+    @property
+    def x2(self) -> float:
+        return self.x + self.width
+
+    @property
+    def y2(self) -> float:
+        return self.y + self.height
