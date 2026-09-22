@@ -8,7 +8,7 @@ class VideoPlayer:
     # Constructor
     def __init__(
         self,
-        fps: float,
+        frame_rate: float,
         window_name: str = "Video",
         max_display_width: int | None = None,
         max_display_height: int | None = None,
@@ -18,7 +18,7 @@ class VideoPlayer:
         self._playback_speed = (
             1.0  # Normal speed; can be adjusted to 0.5x, 2x, etc. using controls
         )
-        self._base_frame_duration = (1.0 / fps) if fps > 0 else 0.0
+        self._base_frame_duration = (1.0 / frame_rate) if frame_rate > 0 else 0.0
         self._next_frame_time = time.perf_counter()
         self._max_display_width = max_display_width
         self._max_display_height = max_display_height
