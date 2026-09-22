@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from src.core.detection_class import DetectionClass
 from src.core.video_track import Track
+from src.utils.bbox_utils import get_bbox_width, get_center_of_bbox
 
 
 class FrameAnnotator:
@@ -26,41 +27,97 @@ class FrameAnnotator:
     def _draw_tracks(self, frame: np.ndarray, tracks: list[Track]) -> None:
         for track in tracks:
             bbox = track.bounding_box
-            x1 = int(bbox.x)
-            y1 = int(bbox.y)
-            x2 = int(bbox.x + bbox.width)
-            y2 = int(bbox.y + bbox.height)
-
-            cv2.rectangle(
-                frame, (x1, y1), (x2, y2), (0, 0, 255), 2
-            )  # Draw bounding box in red
-
-            label_y = max(
-                15, y1 - 8
-            )  # Position label above the bounding box, ensuring it doesn't go off-screen
 
             if track.class_id == DetectionClass.PERSON:
-                label = f"player_id: #{track.id}, conf:{track.confidence:.2f}"  # Create label text with id, confidence
-                cv2.putText(
-                    frame,
-                    label,
-                    (x1, label_y),
-                    cv2.FONT_HERSHEY_COMPLEX,
-                    0.5,
-                    (0, 0, 255),
-                    1,
-                    cv2.LINE_AA,
-                )  # Draw label text in red
+                self._draw_player_annotation(
+                    frame, bbox, track
+                )  # Draw player annotation
 
             if track.class_id == DetectionClass.SPORTS_BALL:
-                label = f"ball_id: #{track.id}, conf:{track.confidence:.2f}"  # Create label text with id, confidence
-                cv2.putText(
-                    frame,
-                    label,
-                    (x1, label_y),
-                    cv2.FONT_HERSHEY_COMPLEX,
-                    0.5,
-                    (255, 0, 255),
-                    1,
-                    cv2.LINE_AA,
-                )  # Draw label text in purple
+                self._draw_triangle(frame, bbox)  # Draw triangle for ball
+
+    def _draw_player_annotation(self, frame: np.ndarray, bbox, track) -> None:
+        """
+        Draws a player annotation on the frame.
+
+        Args:
+            frame (np.ndarray): The video frame to annotate.
+            bbox: The bounding box of the detected object.
+            track (Track): The tracked object.
+        """
+        y2 = int(bbox.y2)  # Bottom y-coordinate of the bounding box
+        x_center, _ = get_center_of_bbox(bbox)
+        bbox_width = int(get_bbox_width(bbox))
+        cv2.ellipse(
+            frame,
+            center=(x_center, y2),
+            axes=(int(bbox_width), int(0.35 * bbox_width)),
+            angle=0,
+            startAngle=-45,
+            endAngle=235,
+            color=(0, 255, 0),  # Green color in BGR format
+            thickness=2,
+            lineType=cv2.LINE_4,
+        )
+
+        label = f"#{track.id}"
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.6
+        text_thickness = 2
+        (text_width, text_height), baseline = cv2.getTextSize(
+            label, font, font_scale, text_thickness
+        )
+        rectangle_width = text_width + 8
+        rectangle_height = text_height + baseline + 4
+        x1_rectangle = x_center - rectangle_width // 2
+        x2_rectangle = x_center + rectangle_width // 2
+        y1_rectangle = y2 + 5
+        y2_rectangle = y1_rectangle + rectangle_height
+
+        if track.id is not None:
+            cv2.rectangle(
+                frame,
+                (int(x1_rectangle), int(y1_rectangle)),
+                (int(x2_rectangle), int(y2_rectangle)),
+                (0, 255, 0),
+                cv2.FILLED,
+            )
+
+            x1_text = x_center - text_width // 2
+            y_text = y1_rectangle + text_height + 2
+
+            cv2.putText(
+                frame,
+                label,
+                (int(x1_text), int(y_text)),
+                font,
+                font_scale,
+                (0, 0, 0),
+                text_thickness,
+            )
+
+    def _draw_triangle(self, frame: np.ndarray, bbox) -> None:
+        """
+        Draws a triangle on the frame representing the ball position of a detected object.
+
+        Args:
+            frame (np.ndarray): The video frame to annotate.
+            bbox: The bounding box of the detected object.
+        """
+
+        y = int(bbox.y)
+        x, _ = get_center_of_bbox(bbox)
+
+        triangle_points = np.array(
+            [
+                [x, y],  # Top vertex
+                [x - 10, y + 20],  # Bottom left vertex
+                [x + 10, y + 20],  # Bottom right vertex
+            ]
+        )
+        cv2.drawContours(
+            frame, [triangle_points], 0, (255, 0, 255), cv2.FILLED
+        )  # Draw filled triangle in purple
+        cv2.drawContours(
+            frame, [triangle_points], 0, (0, 0, 0), 2
+        )  # Draw triangle border in black
