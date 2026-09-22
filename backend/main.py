@@ -9,7 +9,7 @@ from src.video.player import VideoPlayer
 
 
 def main() -> None:
-    video_path = Path("data/input/veo-tracker-highlights-test.mp4")
+    video_path = Path("data/input/u16-women-goal.mp4")  # Path to the input video file
     loader = VideoLoader(video_path)
     detector = YoloDetector()  # Initialize the YOLO detector
     tracker = ByteTracker(
