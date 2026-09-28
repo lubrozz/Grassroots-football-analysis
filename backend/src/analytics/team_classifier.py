@@ -41,9 +41,7 @@ class TeamClassifier:
 
         colour_data = np.array(list(colours.values()))
 
-        self.__kmeans = KMeans(
-            n_clusters=2, init="k-means++", n_init=10, random_state=0
-        )
+        self.__kmeans = KMeans(n_clusters=2, init="k-means++", n_init=1)
 
         self.__kmeans.fit(colour_data)
 
@@ -51,6 +49,10 @@ class TeamClassifier:
             0: self.__kmeans.cluster_centers_[0],
             1: self.__kmeans.cluster_centers_[1],
         }
+
+        print(
+            f"Team 0 Colour: {self.team_colours[0]}, Team 1 Colour: {self.team_colours[1]}"
+        )
 
     def get_team(self, frame: np.ndarray, track: Track) -> int:
         """Gets the team assigned to a detected player.
