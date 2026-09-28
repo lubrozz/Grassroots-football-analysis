@@ -1,0 +1,86 @@
+import numpy as np
+from sklearn.cluster import KMeans
+from src.analytics.colour_extractor import ColourExtractor
+from src.analytics.jersey_cropper import JerseyCropper
+from src.analytics.player_cropper import PlayerCropper
+from src.core.video_track import Track
+
+
+class TeamClassifier:
+    def __init__(self):
+        self.__player_cropper = PlayerCropper()
+        self.__jersey_cropper = JerseyCropper()
+        self.__colour_extractor = ColourExtractor()
+
+        self.__kmeans: KMeans | None = None  # Store the KMeans model for later use
+        self.team_colours: dict[
+            int, np.ndarray
+        ] = {}  # Store team colours for later use
+
+    def assign_team_colour(self, frame: np.ndarray, tracks: list[Track]) -> None:
+        """Assigns team colours to the detected players.
+
+        Args:
+            frame (np.ndarray): The video frame containing the players.
+            tracks (list[Track]): A list of tracked players.
+
+        Raises:
+            ValueError: If not enough distinct colours are found to assign teams.
+        """
+
+        player_crops = self.__player_cropper.crop(frame, tracks)
+
+        jersey_crops = self.__jersey_cropper.crop_jersey(player_crops)
+
+        colours = self.__colour_extractor.extract_colour(jersey_crops)
+
+        if len(colours) < 2:
+            raise ValueError(
+                "Not enough distinct colours found to assign teams. Ensure that there are at least two players."
+            )
+
+        colour_data = np.array(list(colours.values()))
+
+        self.__kmeans = KMeans(
+            n_clusters=2, init="k-means++", n_init=10, random_state=0
+        )
+
+        self.__kmeans.fit(colour_data)
+
+        self.team_colours = {
+            0: self.__kmeans.cluster_centers_[0],
+            1: self.__kmeans.cluster_centers_[1],
+        }
+
+    def get_team(self, frame: np.ndarray, track: Track) -> int:
+        """Gets the team assigned to a detected player.
+
+        Args:
+            frame (np.ndarray): The video frame containing the player.
+            track (Track): The tracked player.
+
+        Raises:
+            RuntimeError: If team colours have not been assigned.
+            ValueError: If no colour is found for the player.
+
+        Returns:
+            int: The team assigned to the player.
+        """
+
+        if self.__kmeans is None:
+            raise RuntimeError("Team colours must be assigned before getting a team.")
+
+        player_crops = self.__player_cropper.crop(frame, [track])
+
+        jersey_crops = self.__jersey_cropper.crop_jersey(player_crops)
+
+        colours = self.__colour_extractor.extract_colour(jersey_crops)
+
+        player_colour = colours.get(track.id)
+
+        if player_colour is None:
+            raise ValueError(f"No colour found for track ID {track.id}.")
+
+        team = self.__kmeans.predict(player_colour.reshape(1, -1))[0]
+
+        return int(team)  # Ensure the team is returned as an integer
