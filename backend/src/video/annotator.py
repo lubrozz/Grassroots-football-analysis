@@ -53,7 +53,7 @@ class FrameAnnotator:
                     colour = team_colours[team]
                     colour = tuple(int(value) for value in colour)
                 else:
-                    colour = (255, 255, 255)  # Default to white if no team assigned
+                    colour = (255, 0, 255)  # Default to magenta if no team assigned
 
                 self._draw_player_annotation(
                     frame, bbox, track, colour

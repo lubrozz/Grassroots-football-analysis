@@ -16,6 +16,9 @@ class TeamClassifier:
         self.team_colours: dict[
             int, np.ndarray
         ] = {}  # Store team colours for later use
+        self.__player_team: dict[
+            int, int
+        ] = {}  # Store player team assignments for later use
 
     def assign_team_colour(self, frame: np.ndarray, tracks: list[Track]) -> None:
         """Assigns team colours to the detected players.
@@ -69,6 +72,9 @@ class TeamClassifier:
             int: The team assigned to the player.
         """
 
+        if track.id in self.__player_team:
+            return self.__player_team[track.id]
+
         if self.__kmeans is None:
             raise RuntimeError("Team colours must be assigned before getting a team.")
 
@@ -84,5 +90,9 @@ class TeamClassifier:
             raise ValueError(f"No colour found for track ID {track.id}.")
 
         team = self.__kmeans.predict(player_colour.reshape(1, -1))[0]
+
+        self.__player_team[track.id] = (
+            team  # Cache the team assignment for future calls
+        )
 
         return int(team)  # Ensure the team is returned as an integer
