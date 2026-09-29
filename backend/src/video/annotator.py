@@ -50,8 +50,15 @@ class FrameAnnotator:
                 team = team_assignments.get(track.id)
 
                 if team is not None:
-                    colour = team_colours[team]
-                    colour = tuple(int(value) for value in colour)
+                    hsv_colour = np.asarray(team_colours[team], dtype=np.uint8).reshape(
+                        1, 1, 3
+                    )
+
+                    bgr_colour = cv2.cvtColor(hsv_colour, cv2.COLOR_HSV2BGR)[
+                        0, 0
+                    ]  # Convert HSV to BGR
+
+                    colour = tuple(int(value) for value in bgr_colour)
                 else:
                     colour = (255, 0, 255)  # Default to magenta if no team assigned
 

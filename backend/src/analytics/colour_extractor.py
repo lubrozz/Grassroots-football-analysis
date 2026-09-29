@@ -48,12 +48,12 @@ class ColourExtractor:
             # Get representative colour in HSV space
             hsv_colour = kmeans.cluster_centers_[player_cluster]
 
-            # Set HSV values to uint8 for OpenCV compatibility
-            hsv_colour = np.uint8([[hsv_colour]])
+            # # Set HSV values to uint8 for OpenCV compatibility
+            # hsv_colour = np.uint8([[hsv_colour]])
 
-            # Convert the HSV colour to BGR colour space
-            bgr_colour = cv2.cvtColor(hsv_colour, cv2.COLOR_HSV2BGR)[0][0]
+            # # Convert the HSV colour to BGR colour space
+            # bgr_colour = cv2.cvtColor(hsv_colour, cv2.COLOR_HSV2BGR)[0][0]
 
-            colours[track_id] = bgr_colour
+            colours[track_id] = hsv_colour
 
         return colours
