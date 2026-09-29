@@ -13,12 +13,19 @@ class TeamClassifier:
         self.__colour_extractor = ColourExtractor()
 
         self.__kmeans: KMeans | None = None  # Store the KMeans model for later use
+
         self.team_colours: dict[
             int, np.ndarray
         ] = {}  # Store team colours for later use
-        self.__player_team: dict[
-            int, int
-        ] = {}  # Store player team assignments for later use
+
+        # Store colour observations until enough is collected
+        self.__player_colours: dict[int, list[np.ndarray]] = {}
+
+        # Final team assignments after KMeans clustering
+        self.__player_team: dict[int, int] = {}
+
+        # Number of colour observations needed before performing KMeans clustering
+        self.__colour_observation_threshold: int = 5
 
     def assign_team_colour(self, frame: np.ndarray, tracks: list[Track]) -> None:
         """Assigns team colours to the detected players.
@@ -57,7 +64,7 @@ class TeamClassifier:
             f"Team 0 Colour: {self.team_colours[0]}, Team 1 Colour: {self.team_colours[1]}"
         )
 
-    def get_team(self, frame: np.ndarray, track: Track) -> int:
+    def get_team(self, frame: np.ndarray, track: Track) -> int | None:
         """Gets the team assigned to a detected player.
 
         Args:
@@ -69,19 +76,18 @@ class TeamClassifier:
             ValueError: If no colour is found for the player.
 
         Returns:
-            int: The team assigned to the player.
+            int | None: The team assigned to the player, or None if not yet assigned.
         """
-
-        if track.id in self.__player_team:
-            return self.__player_team[track.id]
-
         if self.__kmeans is None:
             raise RuntimeError("Team colours must be assigned before getting a team.")
 
+        # Already assigned team, return it
+        if track.id in self.__player_team:
+            return self.__player_team[track.id]
+
+        # Extract current colour for the player
         player_crops = self.__player_cropper.crop(frame, [track])
-
         jersey_crops = self.__jersey_cropper.crop_jersey(player_crops)
-
         colours = self.__colour_extractor.extract_colour(jersey_crops)
 
         player_colour = colours.get(track.id)
@@ -89,10 +95,25 @@ class TeamClassifier:
         if player_colour is None:
             raise ValueError(f"No colour found for track ID {track.id}.")
 
-        team = self.__kmeans.predict(player_colour.reshape(1, -1))[0]
+        # Store this observation for future reference
+        colour_samples = self.__player_colours.setdefault(track.id, [])
+        colour_samples.append(player_colour)
 
-        self.__player_team[track.id] = (
-            team  # Cache the team assignment for future calls
-        )
+        # Not enough observations yet
+        if len(colour_samples) < self.__colour_observation_threshold:
+            return None  # Not enough data to assign a team yet
+
+        # Use the collected colours to determine the team
+        representative_colour = np.median(colour_samples, axis=0)
+
+        team = self.__kmeans.predict(representative_colour.reshape(1, -1))[0]
+
+        # Cache the team assignment for future calls
+        self.__player_team[track.id] = team
+
+        if track.id == 41:
+            print(
+                f"Track ID: {track.id}, Representative Colour: {representative_colour}, Assigned Team: {team}"
+            )
 
         return int(team)  # Ensure the team is returned as an integer
