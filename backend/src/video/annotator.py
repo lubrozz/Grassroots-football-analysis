@@ -50,17 +50,17 @@ class FrameAnnotator:
                 team = team_assignments.get(track.id)
 
                 if team is not None:
-                    hsv_colour = np.asarray(team_colours[team], dtype=np.uint8).reshape(
+                    lab_colour = np.asarray(team_colours[team], dtype=np.uint8).reshape(
                         1, 1, 3
                     )
 
-                    bgr_colour = cv2.cvtColor(hsv_colour, cv2.COLOR_HSV2BGR)[
+                    bgr_colour = cv2.cvtColor(lab_colour, cv2.COLOR_LAB2BGR)[
                         0, 0
                     ]  # Convert HSV to BGR
 
                     colour = tuple(int(value) for value in bgr_colour)
                 else:
-                    colour = (255, 0, 255)  # Default to magenta if no team assigned
+                    colour = (128, 128, 128)  # Neutral grey until a team is decided
 
                 self._draw_player_annotation(
                     frame, bbox, track, colour

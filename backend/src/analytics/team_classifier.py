@@ -20,9 +20,9 @@ class TeamClassifier:
         self.team_colours: dict[int, np.ndarray] = {}
 
         self.__votes: dict[int, list[int]] = {}
+        self.__player_team: dict[int, int] = {}  # Locked team per track ID
         self.__min_fit_samples = min_fit_samples
         self.__min_votes = min_votes
-        self.__vote_window = vote_window
 
     def __get_colours(
         self, frame: np.ndarray, tracks: list[Track]
@@ -60,107 +60,33 @@ class TeamClassifier:
         if self.__kmeans is None:
             raise RuntimeError("Call fit() before get_team().")
 
+        # Team already decided for this track: keep it
+        if track.id in self.__player_team:
+            return self.__player_team[track.id]
+
         colour = self.__get_colours(frame, [track]).get(track.id)
 
         votes = self.__votes.setdefault(track.id, [])
         if colour is not None:
             label = int(self.__kmeans.predict(colour.reshape(1, -1))[0])
             votes.append(self.__label_to_team[label])
-            if len(votes) > self.__vote_window:
-                votes.pop(0)
 
         if len(votes) < self.__min_votes:
             return None
 
-        return int(np.bincount(votes, minlength=2).argmax())
+        # Enough votes: decide by majority and lock the result
+        team = int(np.bincount(votes, minlength=2).argmax())
+        self.__player_team[track.id] = team
+        del self.__votes[track.id]  # Votes are no longer needed
 
-    # def assign_team_colour(self, frame: np.ndarray, tracks: list[Track]) -> None:
-    #     """Assigns team colours to the detected players.
+        return team
 
-    #     Args:
-    #         frame (np.ndarray): The video frame containing the players.
-    #         tracks (list[Track]): A list of tracked players.
+    def assign_teams(self, frame: np.ndarray, tracks: list[Track]) -> dict[int, int]:
+        assignments: dict[int, int] = {}
 
-    #     Raises:
-    #         ValueError: If not enough distinct colours are found to assign teams.
-    #     """
+        for track in tracks:
+            team = self.get_team(frame, track)
+            if team is not None:
+                assignments[track.id] = team
 
-    #     player_crops = self.__player_cropper.crop(frame, tracks)
-
-    #     jersey_crops = self.__jersey_cropper.crop_jersey(player_crops)
-
-    #     colours = self.__colour_extractor.extract_colour(jersey_crops)
-
-    #     if len(colours) < 2:
-    #         raise ValueError(
-    #             "Not enough distinct colours found to assign teams. Ensure that there are at least two players."
-    #         )
-
-    #     colour_data = np.array(list(colours.values()))
-
-    #     self.__kmeans = KMeans(n_clusters=2, init="k-means++", n_init=1)
-
-    #     self.__kmeans.fit(colour_data)
-
-    #     self.team_colours = {
-    #         0: self.__kmeans.cluster_centers_[0],
-    #         1: self.__kmeans.cluster_centers_[1],
-    #     }
-
-    #     print(
-    #         f"Team 0 Colour: {self.team_colours[0]}, Team 1 Colour: {self.team_colours[1]}"
-    #     )
-
-    # def get_team(self, frame: np.ndarray, track: Track) -> int | None:
-    #     """Gets the team assigned to a detected player.
-
-    #     Args:
-    #         frame (np.ndarray): The video frame containing the player.
-    #         track (Track): The tracked player.
-
-    #     Raises:
-    #         RuntimeError: If team colours have not been assigned.
-    #         ValueError: If no colour is found for the player.
-
-    #     Returns:
-    #         int | None: The team assigned to the player, or None if not yet assigned.
-    #     """
-    #     if self.__kmeans is None:
-    #         raise RuntimeError("Team colours must be assigned before getting a team.")
-
-    #     # Already assigned team, return it
-    #     if track.id in self.__player_team:
-    #         return self.__player_team[track.id]
-
-    #     # Extract current colour for the player
-    #     player_crops = self.__player_cropper.crop(frame, [track])
-    #     jersey_crops = self.__jersey_cropper.crop_jersey(player_crops)
-    #     colours = self.__colour_extractor.extract_colour(jersey_crops)
-
-    #     player_colour = colours.get(track.id)
-
-    #     if player_colour is None:
-    #         raise ValueError(f"No colour found for track ID {track.id}.")
-
-    #     # Store this observation for future reference
-    #     colour_samples = self.__player_colours.setdefault(track.id, [])
-    #     colour_samples.append(player_colour)
-
-    #     # Not enough observations yet
-    #     if len(colour_samples) < self.__colour_observation_threshold:
-    #         return None  # Not enough data to assign a team yet
-
-    #     # Use the collected colours to determine the team
-    #     representative_colour = np.median(colour_samples, axis=0)
-
-    #     team = self.__kmeans.predict(representative_colour.reshape(1, -1))[0]
-
-    #     # Cache the team assignment for future calls
-    #     self.__player_team[track.id] = team
-
-    #     if track.id == 41:
-    #         print(
-    #             f"Track ID: {track.id}, Representative Colour: {representative_colour}, Assigned Team: {team}"
-    #         )
-
-    #     return int(team)  # Ensure the team is returned as an integer
+        return assignments
