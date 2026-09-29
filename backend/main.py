@@ -7,8 +7,6 @@ from src.video.annotator import FrameAnnotator
 from src.video.loader import VideoLoader
 from src.video.writer import VideoWriter
 
-# from src.video.player import VideoPlayer
-
 
 def main() -> None:
     video_path = settings.INPUT_VIDEO
@@ -29,12 +27,6 @@ def main() -> None:
         frame_height=loader.metadata.height,
         codec=settings.OUTPUT_VIDEO_CODEC,
     )
-    # player = VideoPlayer(
-    #     frame_rate=loader.metadata.fps,
-    #     window_name="Football Analysis",
-    #     max_display_width=settings.DISPLAY_MAX_WIDTH,
-    #     max_display_height=settings.DISPLAY_MAX_HEIGHT,
-    # )  # Initialize the video player
 
     try:
         while True:
