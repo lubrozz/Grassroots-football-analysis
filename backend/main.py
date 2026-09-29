@@ -15,27 +15,6 @@ def get_player_tracks(tracks: list[Track]) -> list[Track]:
     return [track for track in tracks if track.class_id == DetectionClass.PERSON]
 
 
-def fit_team_classifier(
-    loader: VideoLoader, detector: YoloDetector, team_classifier: TeamClassifier
-) -> None:
-    tracker = ByteTracker(frame_rate=loader.metadata.fps)
-    frames_used = 0
-
-    while not team_classifier.is_ready_to_fit():
-        frame = loader.read()
-
-        if frame is None:
-            break  # Video ended before enough samples were collected
-
-        tracks = tracker.update(detector.detect(frame))
-        team_classifier.collect_samples(frame, get_player_tracks(tracks))
-        frames_used += 1
-
-    team_classifier.fit()  # Raises ValueError if too few samples were collected
-    print(f"Fitted team classifier on {frames_used} frames")
-    print(f"Team Colours (LAB): {team_classifier.team_colours}")
-
-
 def main() -> None:
     video_path = settings.INPUT_VIDEO
     output_path = (
@@ -57,17 +36,11 @@ def main() -> None:
     )
 
     start_time = time.perf_counter()
+    frames_written = 0
 
     try:
         # Pass 1: fit the team model
-        fit_team_classifier(loader, detector, team_classifier)
-
-        # Pass 2: classify, annotate, and write every frame
-        loader.reset()
-        tracker = ByteTracker(
-            frame_rate=loader.metadata.fps
-        )  # Fresh tracker for pass 2
-        frames_written = 0
+        tracks_per_frame: list[list[Track]] = []
 
         while True:
             frame = loader.read()
@@ -77,10 +50,26 @@ def main() -> None:
 
             detections = detector.detect(frame)  # Run detection on the frame
             tracks = tracker.update(detections)  # Update the tracker
+            tracks_per_frame.append(tracks)
 
-            team_assignments = team_classifier.assign_teams(
-                frame, get_player_tracks(tracks)
-            )
+            team_classifier.add_observations(frame, get_player_tracks(tracks))
+
+            if len(tracks_per_frame) % settings.PROGRESS_LOG_EVERY_N_FRAMES == 0:
+                print(
+                    f"Processed {len(tracks_per_frame)}/{loader.metadata.frame_count} frames"
+                )
+
+        # Fit the team model and decide one team per track ID
+        team_classifier.fit()
+        print(f"Team colours (LAB): {team_classifier.team_colours}")
+        team_assignments = team_classifier.assign_teams(debug_track_ids={2, 32, 203})
+
+        # Pass 2: classify, annotate, and write every frame
+        loader.reset()
+        for tracks in tracks_per_frame:
+            frame = loader.read()
+            if frame is None:
+                break
 
             annotated_frame = annotator.annotate(
                 frame, tracks, team_assignments, team_classifier.team_colours
@@ -88,11 +77,6 @@ def main() -> None:
 
             writer.write(annotated_frame)
             frames_written += 1
-
-            if writer._frames_written % settings.PROGRESS_LOG_EVERY_N_FRAMES == 0:
-                print(
-                    f"Processed {writer._frames_written}/{loader.metadata.frame_count} frames"
-                )
 
     finally:
         writer.close()

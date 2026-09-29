@@ -7,22 +7,15 @@ from src.core.video_track import Track
 
 
 class TeamClassifier:
-    def __init__(
-        self, min_fit_samples: int = 100, min_votes: int = 8, vote_window: int = 30
-    ):
+    def __init__(self):
         self.__player_cropper = PlayerCropper()
         self.__jersey_cropper = JerseyCropper()
         self.__colour_extractor = ColourExtractor()
 
-        self.__samples: list[np.ndarray] = []
+        self.__track_colours: dict[int, list[np.ndarray]] = {}  # All colours per track
         self.__kmeans: KMeans | None = None
         self.__label_to_team: dict[int, int] = {}
         self.team_colours: dict[int, np.ndarray] = {}
-
-        self.__votes: dict[int, list[int]] = {}
-        self.__player_team: dict[int, int] = {}  # Locked team per track ID
-        self.__min_fit_samples = min_fit_samples
-        self.__min_votes = min_votes
 
     def __get_colours(
         self, frame: np.ndarray, tracks: list[Track]
@@ -31,18 +24,19 @@ class TeamClassifier:
         jerseys = self.__jersey_cropper.crop_jersey(crops)
         return self.__colour_extractor.extract_colour(jerseys)
 
-    def collect_samples(self, frame: np.ndarray, tracks: list[Track]) -> None:
-        """Call this on the first N frames, then call fit()."""
-        self.__samples.extend(self.__get_colours(frame, tracks).values())
-
-    def is_ready_to_fit(self) -> bool:
-        return len(self.__samples) >= self.__min_fit_samples
+    def add_observations(self, frame: np.ndarray, tracks: list[Track]) -> None:
+        colours = self.__get_colours(frame, tracks)
+        for track_id, colour in colours.items():
+            self.__track_colours.setdefault(track_id, []).append(colour)
 
     def fit(self) -> None:
-        if len(self.__samples) < 2:
+        data = np.concatenate(
+            [np.array(colours) for colours in self.__track_colours.values()]
+        )
+
+        if len(data) < 2:
             raise ValueError("Not enough colour samples to fit teams.")
 
-        data = np.array(self.__samples)
         self.__kmeans = KMeans(
             n_clusters=2, init="k-means++", n_init=10, random_state=0
         ).fit(data)
@@ -56,37 +50,33 @@ class TeamClassifier:
             for label, team in self.__label_to_team.items()
         }
 
-    def get_team(self, frame: np.ndarray, track: Track) -> int | None:
+    def assign_teams(self, debug_track_ids: set[int] | None = None) -> dict[int, int]:
         if self.__kmeans is None:
-            raise RuntimeError("Call fit() before get_team().")
+            raise RuntimeError("Call fit() before assign_teams().")
 
-        # Team already decided for this track: keep it
-        if track.id in self.__player_team:
-            return self.__player_team[track.id]
-
-        colour = self.__get_colours(frame, [track]).get(track.id)
-
-        votes = self.__votes.setdefault(track.id, [])
-        if colour is not None:
-            label = int(self.__kmeans.predict(colour.reshape(1, -1))[0])
-            votes.append(self.__label_to_team[label])
-
-        if len(votes) < self.__min_votes:
-            return None
-
-        # Enough votes: decide by majority and lock the result
-        team = int(np.bincount(votes, minlength=2).argmax())
-        self.__player_team[track.id] = team
-        del self.__votes[track.id]  # Votes are no longer needed
-
-        return team
-
-    def assign_teams(self, frame: np.ndarray, tracks: list[Track]) -> dict[int, int]:
         assignments: dict[int, int] = {}
+        for track_id, colours in self.__track_colours.items():
+            labels = self.__kmeans.predict(np.array(colours))
+            teams = [self.__label_to_team[int(label)] for label in labels]
+            votes = np.bincount(teams, minlength=2)
+            assignments[track_id] = int(votes.argmax())
 
-        for track in tracks:
-            team = self.get_team(frame, track)
-            if team is not None:
-                assignments[track.id] = team
+            if debug_track_ids is not None and track_id in debug_track_ids:
+                self.__print_track_debug(track_id, colours, votes)
 
         return assignments
+
+    def __print_track_debug(
+        self, track_id: int, colours: list[np.ndarray], votes: np.ndarray
+    ) -> None:
+        median_colour = np.median(np.array(colours), axis=0)
+        distances = {
+            team: float(np.linalg.norm(median_colour - centre))
+            for team, centre in self.team_colours.items()
+        }
+        print(
+            f"Track {track_id}: {len(colours)} observations | "
+            f"votes team 0/1 = {votes[0]}/{votes[1]} | "
+            f"median LAB = {np.round(median_colour, 1)} | "
+            f"distance to team 0 = {distances[0]:.1f}, team 1 = {distances[1]:.1f}"
+        )
