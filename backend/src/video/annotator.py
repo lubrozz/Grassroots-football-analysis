@@ -1,42 +1,81 @@
 import cv2
 import numpy as np
 from src.core.detection_class import DetectionClass
+from src.core.video_boundingBox import BoundingBox
 from src.core.video_track import Track
 from src.utils.bbox_utils import get_bbox_width, get_center_of_bbox
 
 
 class FrameAnnotator:
-    def annotate(self, frame: np.ndarray, tracks: list[Track]) -> np.ndarray:
+    def annotate(
+        self,
+        frame: np.ndarray,
+        tracks: list[Track],
+        team_assignments: dict[int, int],
+        team_colours: dict[int, np.ndarray],
+    ) -> np.ndarray:
         """
         Annotates the given video frame with the provided tracks.
 
         Args:
             frame (np.ndarray): The video frame to annotate.
             tracks (list[Track]): A list of tracked objects to annotate on the frame.
+            team_assignments (dict[int, int]): A dictionary mapping track IDs to their assigned teams.
+            team_colours (dict[int, np.ndarray]): A dictionary mapping team IDs to their corresponding colours.
 
         Returns:
             np.ndarray: The annotated video frame.
         """
         annotated = frame.copy()  # Create a copy of the frame to annotate
 
-        self._draw_tracks(annotated, tracks)  # Draw each track on the frame
+        self._draw_tracks(
+            annotated, tracks, team_assignments, team_colours
+        )  # Draw each track on the frame
 
         return annotated
 
     # Private methods
-    def _draw_tracks(self, frame: np.ndarray, tracks: list[Track]) -> None:
+    def _draw_tracks(
+        self,
+        frame: np.ndarray,
+        tracks: list[Track],
+        team_assignments: dict[int, int],
+        team_colours: dict[int, np.ndarray],
+    ) -> None:
+
         for track in tracks:
             bbox = track.bounding_box
 
             if track.class_id == DetectionClass.PERSON:
+                team = team_assignments.get(track.id)
+
+                if team is not None:
+                    lab_colour = np.asarray(team_colours[team], dtype=np.uint8).reshape(
+                        1, 1, 3
+                    )
+
+                    bgr_colour = cv2.cvtColor(lab_colour, cv2.COLOR_LAB2BGR)[
+                        0, 0
+                    ]  # Convert HSV to BGR
+
+                    colour = tuple(int(value) for value in bgr_colour)
+                else:
+                    colour = (128, 128, 128)  # Neutral grey until a team is decided
+
                 self._draw_player_annotation(
-                    frame, bbox, track
+                    frame, bbox, track, colour
                 )  # Draw player annotation
 
             if track.class_id == DetectionClass.SPORTS_BALL:
                 self._draw_triangle(frame, bbox)  # Draw triangle for ball
 
-    def _draw_player_annotation(self, frame: np.ndarray, bbox, track) -> None:
+    def _draw_player_annotation(
+        self,
+        frame: np.ndarray,
+        bbox: BoundingBox,
+        track: Track,
+        colour: tuple,
+    ) -> None:
         """
         Draws a player annotation on the frame.
 
@@ -44,6 +83,7 @@ class FrameAnnotator:
             frame (np.ndarray): The video frame to annotate.
             bbox: The bounding box of the detected object.
             track (Track): The tracked object.
+            colour (tuple): The colour to use for the annotation.
         """
         y2 = int(bbox.y2)  # Bottom y-coordinate of the bounding box
         x_center, _ = get_center_of_bbox(bbox)
@@ -55,7 +95,7 @@ class FrameAnnotator:
             angle=0,
             startAngle=-45,
             endAngle=235,
-            color=(0, 255, 0),  # Green color in BGR format
+            color=colour,
             thickness=2,
             lineType=cv2.LINE_4,
         )
@@ -79,7 +119,7 @@ class FrameAnnotator:
                 frame,
                 (int(x1_rectangle), int(y1_rectangle)),
                 (int(x2_rectangle), int(y2_rectangle)),
-                (0, 255, 0),
+                colour,
                 cv2.FILLED,
             )
 
