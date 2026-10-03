@@ -24,3 +24,7 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+# Data files
+backend/data/input/*
+backend/data/output/*
