@@ -6,6 +6,11 @@ from src.core.detection_class import DetectionClass
 from src.core.video_track import Track
 from src.detection.yolo_detector import YoloDetector
 from src.tracking.byte_tracker import ByteTracker
+from src.tracking.tracking_stats import (
+    pick_reference_frames,
+    print_tracking_stats,
+    save_reference_frames,
+)
 from src.video.annotator import FrameAnnotator
 from src.video.loader import VideoLoader
 from src.video.writer import VideoWriter
@@ -41,6 +46,8 @@ def main() -> None:
     try:
         # Pass 1: fit the team model
         tracks_per_frame: list[list[Track]] = []
+        reference_frames = pick_reference_frames(loader.metadata.frame_count)
+        reference_dir = settings.OUTPUT_DIR / "reference_frames" / video_path.stem
 
         while True:
             frame = loader.read()
@@ -65,9 +72,12 @@ def main() -> None:
         # debug_track_ids = {2, 32, 203}  # Example track IDs to debug
         team_assignments = team_classifier.assign_teams(debug_track_ids=None)
 
+        # Print tracking statistics
+        print_tracking_stats(tracks_per_frame, loader.metadata.fps, reference_frames)
+
         # Pass 2: classify, annotate, and write every frame
         loader.reset()
-        for tracks in tracks_per_frame:
+        for frame_index, tracks in enumerate(tracks_per_frame):
             frame = loader.read()
             if frame is None:
                 break
@@ -78,6 +88,11 @@ def main() -> None:
 
             writer.write(annotated_frame)
             frames_written += 1
+
+            if frame_index in reference_frames:
+                save_reference_frames(
+                    reference_dir, frame_index, frame, annotated_frame
+                )
 
     finally:
         writer.close()
