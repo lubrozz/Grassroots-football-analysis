@@ -24,7 +24,7 @@ YOLO_MODEL = (
 YOLO_IMAGE_SIZE = 1280  # Resize input images to this size for YOLO (higher for better accuracy, lower for performance)
 YOLO_MAX_DETECTIONS = 60  # How many detections to keep per frame (higher for crowded scenes, lower for performance)
 
-PERSON_CONFIDENCE_THRESHOLD = 0.28  # Set a confidence threshold for detections
+PERSON_CONFIDENCE_THRESHOLD = 0.1  # Set a confidence threshold for detections
 BALL_CONFIDENCE_THRESHOLD = 0.02  # Set a confidence threshold for ball detections
 
 #
