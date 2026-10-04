@@ -1,5 +1,6 @@
 import numpy as np
 import supervision as sv
+from src.config import settings
 from src.core.video_boundingBox import BoundingBox
 from src.core.video_detection import Detection
 from src.core.video_track import Track
@@ -9,7 +10,12 @@ from supervision.tracker.byte_tracker.core import ByteTrack
 class ByteTracker:
     def __init__(self, frame_rate: float):
         # Initialize the tracker state here
-        self._tracker = ByteTrack(frame_rate=frame_rate)
+        self._tracker = ByteTrack(
+            frame_rate=frame_rate,
+            track_activation_threshold=settings.TRACK_ACTIVATION_THRESHOLD,
+            lost_track_buffer=settings.LOST_TRACK_BUFFER,
+            minimum_matching_threshold=settings.MINIMUM_MATCHING_THRESHOLD,
+        )
 
     def update(self, detections: list[Detection]) -> list[Track]:
         """
@@ -30,19 +36,6 @@ class ByteTracker:
 
         assert tracked_detections.tracker_id is not None
         assert tracked_detections.confidence is not None
-
-        # for tracker_id, confidence, xyxy in zip(
-        #     tracked_detections.tracker_id,
-        #     tracked_detections.confidence,
-        #     tracked_detections.xyxy,
-        # ):
-        #     if tracker_id in (54, 105, 184):
-        #         print(
-        #             f"#{tracker_id} "
-        #             f"conf={confidence:.2f} "
-        #             f"w={xyxy[2] - xyxy[0]:.1f} "
-        #             f"h={xyxy[3] - xyxy[1]:.1f}"
-        #         )
 
         return self._to_tracks(tracked_detections)
 

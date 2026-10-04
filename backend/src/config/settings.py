@@ -21,12 +21,25 @@ YOLO_MODEL = (
     MODEL_DIR / "yolov8n.pt"
 )  # Load a pre-trained YOLO model(optionally use yolov8s.pt for better accuracy)
 
-YOLO_IMAGE_SIZE = 1280
-
-YOLO_MAX_DETECTIONS = 60
+YOLO_IMAGE_SIZE = 1280  # Resize input images to this size for YOLO (higher for better accuracy, lower for performance)
+YOLO_MAX_DETECTIONS = 60  # How many detections to keep per frame (higher for crowded scenes, lower for performance)
 
 PERSON_CONFIDENCE_THRESHOLD = 0.28  # Set a confidence threshold for detections
 BALL_CONFIDENCE_THRESHOLD = 0.02  # Set a confidence threshold for ball detections
+
+#
+# ByteTrack
+#
+
+TRACK_ACTIVATION_THRESHOLD = (
+    0.25  # Minimum confidence score for a detection to be considered for tracking
+)
+LOST_TRACK_BUFFER = (
+    30  # Number of frames to keep a track after it is lost (at 30fps, this is 1 second)
+)
+MINIMUM_MATCHING_THRESHOLD = (
+    0.8  # Minimum IoU threshold for matching detections to tracks
+)
 
 #
 # Video
