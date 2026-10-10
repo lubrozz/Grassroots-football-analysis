@@ -66,14 +66,6 @@ def main() -> None:
                 else None
             )  # Estimate camera motion if enabled
 
-            # Temp_ check that the camera motion makes sense:
-            # frame_index = len(tracks_per_frame)
-            # if camera_motion is not None and frame_index % 60 == 0:
-            #     print(
-            #         f"Frame {frame_index}: camera shift "
-            #         f"x={camera_motion[0, 2]:.1f}, y={camera_motion[1, 2]:.1f} px"
-            # )
-
             tracks = tracker.update(detections, camera_motion)  # Update the tracker
             tracks_per_frame.append(tracks)
 
@@ -86,12 +78,7 @@ def main() -> None:
 
         # Fit the team model and decide one team per track ID
         team_classifier.fit()
-        # print(f"Team colours (LAB): {team_classifier.team_colours}")
-        # debug_track_ids = {2, 32, 203}  # Example track IDs to debug
         team_assignments = team_classifier.assign_teams(debug_track_ids=None)
-
-        # Print tracking statistics
-        print_tracking_stats(tracks_per_frame, loader.metadata.fps, reference_frames)
 
         # Pass 2: classify, annotate, and write every frame
         loader.reset()
