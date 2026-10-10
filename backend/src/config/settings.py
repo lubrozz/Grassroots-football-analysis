@@ -18,7 +18,7 @@ MODEL_DIR = PROJECT_ROOT / "models"
 #
 
 YOLO_MODEL = (
-    MODEL_DIR / "yolov8s.pt"
+    MODEL_DIR / "yolov8m.pt"
 )  # Load a pre-trained YOLO model(optionally use yolov8s.pt for better accuracy)
 
 YOLO_IMAGE_SIZE = 1280  # Resize input images to this size for YOLO (higher for better accuracy, lower for performance)
@@ -38,6 +38,8 @@ LOST_TRACK_BUFFER = 30  # Number of frames to keep a track after it is lost
 MINIMUM_MATCHING_THRESHOLD = (
     0.8  # Minimum IoU threshold for matching detections to tracks
 )
+
+CMC_ENABLED = True  # Enable/disable CMC (Camera Motion Compensation) for tracking
 
 #
 # Video

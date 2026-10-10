@@ -6,6 +6,7 @@ from src.core.detection_class import DetectionClass
 from src.core.video_track import Track
 from src.detection.yolo_detector import YoloDetector
 from src.tracking.byte_tracker import ByteTracker
+from src.tracking.camera_motion import CameraMotionEstimator
 from src.tracking.tracking_stats import (
     pick_reference_frames,
     print_tracking_stats,
@@ -39,6 +40,9 @@ def main() -> None:
         frame_height=loader.metadata.height,
         codec=settings.OUTPUT_VIDEO_CODEC,
     )
+    camera_motion_estimator = (
+        CameraMotionEstimator() if settings.CMC_ENABLED else None
+    )  # Initialize the camera motion estimator
 
     start_time = time.perf_counter()
     frames_written = 0
@@ -56,7 +60,21 @@ def main() -> None:
                 break  # End of video
 
             detections = detector.detect(frame)  # Run detection on the frame
-            tracks = tracker.update(detections)  # Update the tracker
+            camera_motion = (
+                camera_motion_estimator.estimate(frame, detections)
+                if camera_motion_estimator is not None
+                else None
+            )  # Estimate camera motion if enabled
+
+            # Temp_ check that the camera motion makes sense:
+            # frame_index = len(tracks_per_frame)
+            # if camera_motion is not None and frame_index % 60 == 0:
+            #     print(
+            #         f"Frame {frame_index}: camera shift "
+            #         f"x={camera_motion[0, 2]:.1f}, y={camera_motion[1, 2]:.1f} px"
+            # )
+
+            tracks = tracker.update(detections, camera_motion)  # Update the tracker
             tracks_per_frame.append(tracks)
 
             team_classifier.add_observations(frame, get_player_tracks(tracks))

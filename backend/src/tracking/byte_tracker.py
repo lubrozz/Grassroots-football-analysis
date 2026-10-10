@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 import supervision as sv
 from src.config import settings
@@ -16,23 +17,44 @@ class ByteTracker:
             lost_track_buffer=settings.LOST_TRACK_BUFFER,
             minimum_matching_threshold=settings.MINIMUM_MATCHING_THRESHOLD,
         )
+        self._camera_transform = np.eye(
+            3, dtype=np.float32
+        )  # Reference -> Current frame
 
-    def update(self, detections: list[Detection]) -> list[Track]:
+    def update(
+        self, detections: list[Detection], camera_motion: np.ndarray | None = None
+    ) -> list[Track]:
         """
         Updates the tracker with new detections and returns the current tracks.
 
         Args:
             detections (list[Detection]): A list of Detection objects for the current frame.
+            camera_motion (np.ndarray | None): The camera motion matrix.
 
         Returns:
             list[Track]: A list of Track objects representing the current tracked objects.
         """
+        if camera_motion is not None:
+            # Accumulate before the early return, so no camera motion is ever skipped
+            self._camera_transform = (
+                np.vstack([camera_motion, [0, 0, 1]]) @ self._camera_transform
+            )
+
         if not detections:
             return []
 
         sv_detections = self._to_supervision_detections(detections)
+        sv_detections.data["frame_xyxy"] = (
+            sv_detections.xyxy.copy()
+        )  # Store original frame coordinates
+        sv_detections.xyxy = self._to_reference(
+            sv_detections.xyxy
+        )  # Transform to reference coordinates
 
         tracked_detections = self._tracker.update_with_detections(sv_detections)
+        tracked_detections.xyxy = tracked_detections.data[
+            "frame_xyxy"
+        ]  # Restore original frame coordinates
 
         assert tracked_detections.tracker_id is not None
         assert tracked_detections.confidence is not None
@@ -119,3 +141,17 @@ class ByteTracker:
             tracks.append(track)
 
         return tracks
+
+    def _to_reference(self, xyxy: np.ndarray) -> np.ndarray:
+        """
+        Transforms bounding boxes from the current frame to the reference frame using the accumulated camera motion.
+
+        Args:
+            xyxy (np.ndarray): An array of bounding boxes in the format [x1, y1, x2, y2].
+
+        Returns:
+            np.ndarray: An array of transformed bounding boxes in the reference frame.
+        """
+        inverse = np.linalg.inv(self._camera_transform)[:2]
+        corners = xyxy.reshape(-1, 2, 2)  # (x1, y1), (x2, y2) as seperate points
+        return cv2.transform(corners, inverse).reshape(-1, 4)
