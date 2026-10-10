@@ -1,11 +1,10 @@
 import numpy as np
 from src.config import settings
+from src.core.detection_class import DetectionClass
 from src.core.video_boundingBox import BoundingBox
 from src.core.video_detection import Detection
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
-
-from src.core.detection_class import DetectionClass
 
 
 class YoloDetector:

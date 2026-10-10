@@ -18,15 +18,28 @@ MODEL_DIR = PROJECT_ROOT / "models"
 #
 
 YOLO_MODEL = (
-    MODEL_DIR / "yolov8n.pt"
+    MODEL_DIR / "yolov8m.pt"
 )  # Load a pre-trained YOLO model(optionally use yolov8s.pt for better accuracy)
 
-YOLO_IMAGE_SIZE = 1280
+YOLO_IMAGE_SIZE = 1280  # Resize input images to this size for YOLO (higher for better accuracy, lower for performance)
+YOLO_MAX_DETECTIONS = 60  # How many detections to keep per frame (higher for crowded scenes, lower for performance)
 
-YOLO_MAX_DETECTIONS = 60
-
-PERSON_CONFIDENCE_THRESHOLD = 0.28  # Set a confidence threshold for detections
+PERSON_CONFIDENCE_THRESHOLD = 0.1  # Set a confidence threshold for detections
 BALL_CONFIDENCE_THRESHOLD = 0.02  # Set a confidence threshold for ball detections
+
+#
+# ByteTrack
+#
+
+TRACK_ACTIVATION_THRESHOLD = (
+    0.25  # Minimum confidence score for a detection to be considered for tracking
+)
+LOST_TRACK_BUFFER = 30  # Number of frames to keep a track after it is lost
+MINIMUM_MATCHING_THRESHOLD = (
+    0.8  # Minimum IoU threshold for matching detections to tracks
+)
+
+CMC_ENABLED = True  # Enable/disable CMC (Camera Motion Compensation) for tracking
 
 #
 # Video
