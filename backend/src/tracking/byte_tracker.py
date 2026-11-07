@@ -16,6 +16,7 @@ class ByteTracker:
             track_activation_threshold=settings.TRACK_ACTIVATION_THRESHOLD,
             lost_track_buffer=settings.LOST_TRACK_BUFFER,
             minimum_matching_threshold=settings.MINIMUM_MATCHING_THRESHOLD,
+            minimum_consecutive_frames=settings.MINIMUM_CONSECUTIVE_FRAMES,
         )
         self._camera_transform = np.eye(
             3, dtype=np.float32
