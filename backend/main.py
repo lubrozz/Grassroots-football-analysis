@@ -6,6 +6,12 @@ from src.core.detection_class import DetectionClass
 from src.core.video_track import Track
 from src.detection.yolo_detector import YoloDetector
 from src.tracking.byte_tracker import ByteTracker
+from src.tracking.camera_motion import CameraMotionEstimator
+from src.tracking.tracking_stats import (
+    pick_reference_frames,
+    print_tracking_stats,
+    save_reference_frames,
+)
 from src.video.annotator import FrameAnnotator
 from src.video.loader import VideoLoader
 from src.video.writer import VideoWriter
@@ -34,6 +40,9 @@ def main() -> None:
         frame_height=loader.metadata.height,
         codec=settings.OUTPUT_VIDEO_CODEC,
     )
+    camera_motion_estimator = (
+        CameraMotionEstimator() if settings.CMC_ENABLED else None
+    )  # Initialize the camera motion estimator
 
     start_time = time.perf_counter()
     frames_written = 0
@@ -41,6 +50,8 @@ def main() -> None:
     try:
         # Pass 1: fit the team model
         tracks_per_frame: list[list[Track]] = []
+        reference_frames = pick_reference_frames(loader.metadata.frame_count)
+        reference_dir = settings.OUTPUT_DIR / "reference_frames" / video_path.stem
 
         while True:
             frame = loader.read()
@@ -49,7 +60,13 @@ def main() -> None:
                 break  # End of video
 
             detections = detector.detect(frame)  # Run detection on the frame
-            tracks = tracker.update(detections)  # Update the tracker
+            camera_motion = (
+                camera_motion_estimator.estimate(frame, detections)
+                if camera_motion_estimator is not None
+                else None
+            )  # Estimate camera motion if enabled
+
+            tracks = tracker.update(detections, camera_motion)  # Update the tracker
             tracks_per_frame.append(tracks)
 
             team_classifier.add_observations(frame, get_player_tracks(tracks))
@@ -61,12 +78,11 @@ def main() -> None:
 
         # Fit the team model and decide one team per track ID
         team_classifier.fit()
-        print(f"Team colours (LAB): {team_classifier.team_colours}")
-        team_assignments = team_classifier.assign_teams(debug_track_ids={2, 32, 203})
+        team_assignments = team_classifier.assign_teams(debug_track_ids=None)
 
         # Pass 2: classify, annotate, and write every frame
         loader.reset()
-        for tracks in tracks_per_frame:
+        for frame_index, tracks in enumerate(tracks_per_frame):
             frame = loader.read()
             if frame is None:
                 break
@@ -77,6 +93,11 @@ def main() -> None:
 
             writer.write(annotated_frame)
             frames_written += 1
+
+            if frame_index in reference_frames:
+                save_reference_frames(
+                    reference_dir, frame_index, frame, annotated_frame
+                )
 
     finally:
         writer.close()
