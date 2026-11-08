@@ -71,3 +71,6 @@ MOMENT_SECONDS_AFTER = 0.5  # Seconds after the moment to include in analysis (m
 MOMENT_MOVEMENT_SECONDS = (
     0.5  # Seconds to look back for movement estimation (for player movement arrows)
 )
+MOMENT_DEBUG_IMAGES = (
+    True  # Also save a PNG with foot positions and movement drawn on it
+)

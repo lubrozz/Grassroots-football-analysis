@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from src.core.moment import MomentSnapshot
 from src.core.detection_class import DetectionClass
 from src.core.video_boundingBox import BoundingBox
 from src.core.video_track import Track
@@ -161,3 +162,44 @@ class FrameAnnotator:
         cv2.drawContours(
             frame, [triangle_points], 0, (0, 0, 0), 2
         )  # Draw triangle border in black
+
+    def draw_moment(self, frame: np.ndarray, snapshot: MomentSnapshot) -> np.ndarray:
+        """Debug view of a moment: box, foot position, track ID and movement per player."""
+        DEBUG_TEAM_COLOURS = {0: (255, 255, 255), 1: (87, 139, 46)}  # BGR: white, green
+        DEBUG_NO_TEAM_COLOUR = (255, 0, 255)  # Magenta
+        DEBUG_ARROW_SECONDS = 0.5
+        annotated = frame.copy()
+
+        for player in snapshot.players:
+            bbox = player.bounding_box
+            x, y = (int(value) for value in player.foot_position)
+            colour = DEBUG_TEAM_COLOURS.get(player.team, DEBUG_NO_TEAM_COLOUR)
+
+            cv2.rectangle(
+                annotated,
+                (int(bbox.x), int(bbox.y)),
+                (int(bbox.x2), int(bbox.y2)),
+                colour,
+                1,
+            )
+            cv2.circle(annotated, (x, y), 6, colour, -1)
+            cv2.putText(
+                annotated,
+                str(player.track_id),
+                (x + 8, y - 8),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                colour,
+                1,
+                cv2.LINE_AA,
+            )
+
+            if player.movement is not None:
+                dx, dy = player.movement
+                end = (
+                    int(x + dx * DEBUG_ARROW_SECONDS),
+                    int(y + dy * DEBUG_ARROW_SECONDS),
+                )
+                cv2.arrowedLine(annotated, (x, y), end, (0, 255, 255), 2, tipLength=0.3)
+
+        return annotated

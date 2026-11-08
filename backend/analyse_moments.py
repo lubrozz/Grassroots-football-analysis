@@ -35,6 +35,12 @@ def main() -> None:
                 loader, Moment(time_seconds=time_seconds)
             )
             json_path = save_moment(snapshot, key_frame, output_dir)
+            if settings.MOMENT_DEBUG_IMAGES:
+                debug_path = json_path.with_name(f"{json_path.stem}_debug.png")
+                cv2.imwrite(str(debug_path), annotator.draw_moment(key_frame, snapshot))
+            print(
+                f"{time_seconds:.1f} s: {len(snapshot.players)} players -> saved to {json_path}"
+            )
     except Exception as e:
         print(f"Error occurred while analyzing moments: {e}")
     finally:
