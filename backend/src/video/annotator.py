@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
-from src.core.moment import MomentSnapshot
 from src.core.detection_class import DetectionClass
+from src.core.moment import MomentSnapshot
 from src.core.video_boundingBox import BoundingBox
 from src.core.video_track import Track
 from src.utils.bbox_utils import get_bbox_width, get_center_of_bbox
@@ -201,5 +201,15 @@ class FrameAnnotator:
                     int(y + dy * DEBUG_ARROW_SECONDS),
                 )
                 cv2.arrowedLine(annotated, (x, y), end, (0, 255, 255), 2, tipLength=0.3)
+
+            if len(player.trail) > 1:
+                points = np.array(player.trail, dtype=np.int32)
+                cv2.polylines(
+                    annotated,
+                    [points],
+                    isClosed=False,
+                    color=(0, 255, 255),
+                    thickness=1,
+                )
 
         return annotated

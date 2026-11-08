@@ -26,6 +26,7 @@ def main() -> None:
         seconds_before=settings.MOMENT_SECONDS_BEFORE,
         seconds_after=settings.MOMENT_SECONDS_AFTER,
         movement_seconds=settings.MOMENT_MOVEMENT_SECONDS,
+        max_step_heights=settings.MOMENT_MAX_STEP_HEIGHTS,
     )
 
     try:

@@ -1,4 +1,5 @@
 import numpy as np
+from src.analytics.movement import build_trail, foot_position, velocity_from_trail
 from src.analytics.team_classifier import TeamClassifier
 from src.core.detection_class import DetectionClass
 from src.core.moment import Moment, MomentSnapshot, PlayerSnapshot
@@ -16,11 +17,13 @@ class MomentAnalyzer:
         seconds_before: float = 2.0,
         seconds_after: float = 0.5,
         movement_seconds: float = 0.5,
+        max_step_heights: float = 0.25,
     ):
         self._detector = detector
         self._seconds_before = seconds_before
         self._seconds_after = seconds_after
         self._movement_seconds = movement_seconds
+        self._max_step_heights = max_step_heights
 
     def analyse(
         self, loader: VideoLoader, moment: Moment
@@ -78,16 +81,9 @@ class MomentAnalyzer:
 
         team_classifier.fit()
         teams = team_classifier.assign_teams()
-
         players = [
-            PlayerSnapshot(
-                track_id=track.id,
-                team=teams.get(track.id),
-                bounding_box=track.bounding_box,
-                foot_position=self._foot_position(track),
-                movement=self._movement(
-                    track, key_index, tracks_by_frame, camera_transforms, fps
-                ),
+            self._snapshot_player(
+                track, key_index, tracks_by_frame, camera_transforms, teams, fps
             )
             for track in tracks_by_frame[key_index].values()
         ]
@@ -101,63 +97,47 @@ class MomentAnalyzer:
         return snapshot, key_frame
 
     # Private helpers
-    def _foot_position(self, track: Track) -> tuple[float, float]:
-        """
-        Estimates the foot position of a player based on their bounding box.
-
-        Args:
-            track (Track): The track object representing the player.
-
-        Returns:
-            tuple[float, float]: The estimated foot position (x, y) in pixels.
-        """
-        bbox = track.bounding_box
-        return (bbox.x + bbox.width / 2, bbox.y2)  # Bottom center of the bounding box
-
-    def _movement(
+    def _snapshot_player(
         self,
         track: Track,
         key_index: int,
         tracks_by_frame: dict[int, dict[int, Track]],
         camera_transforms: dict[int, np.ndarray],
+        teams: dict[int, int],
         fps: float,
-    ) -> tuple[float, float] | None:
-        """
-        Estimates the movement of a player in pixels per second.
+    ) -> PlayerSnapshot:
+        """Creates a PlayerSnapshot for a given track at the key frame index.
 
-        Args:
-            track (Track): The track object representing the player.
+        args:
+            track (Track): The track to create a snapshot for.
             key_index (int): The index of the key frame.
-            tracks_by_frame (dict[int, dict[int, Track]]): A dictionary mapping frame indices to player tracks.
-            camera_transforms (dict[int, np.ndarray]): A dictionary mapping frame indices to camera motion matrices.
-            fps (float): The frames per second of the video.
+            tracks_by_frame (dict[int, dict[int, Track]]): A dictionary mapping frame indices to track dictionaries.
+            camera_transforms (dict[int, np.ndarray]): A dictionary mapping frame indices to camera transformation matrices.
+            teams (dict[int, int]): A dictionary mapping track IDs to team IDs.
+            fps (float): Frames per second of the video.
 
-        Returns:
-            tuple[float, float] | None: The estimated movement (dx, dy) in pixels per second, or None if not enough data.
+        returns:
+            PlayerSnapshot: A snapshot of the player at the key frame.
         """
         max_offset = int(self._movement_seconds * fps)
-        min_offset = max(1, max_offset // 2)  # Ensure at least one frame difference
 
-        # Prefer the full window, but accept a shorter one for newer tracks
-        for offset in range(max_offset, min_offset - 1, -1):
-            earlier_track = tracks_by_frame.get(key_index - offset, {}).get(track.id)
-            if earlier_track is not None:
-                break
-        else:
-            return None  # Not enough data to estimate movement
-
-            # Where the earlier foot position would be in the key frame's image
-        earlier_point = np.array(
-            [*self._foot_position(earlier_track), 1.0]
-        )  # Homogeneous coordinates
-        earlier_to_key_transform = camera_transforms[key_index] @ np.linalg.inv(
-            camera_transforms[key_index - offset]
+        trail = build_trail(
+            track,
+            key_index,
+            tracks_by_frame,
+            camera_transforms,
+            max_offset=int(self._movement_seconds * fps),
+            max_step_heights=self._max_step_heights,
         )
-        earlier_in_key_frame = earlier_to_key_transform @ earlier_point
+        movement = velocity_from_trail(
+            trail, min_offset=max(1, int(self._movement_seconds * fps // 2)), fps=fps
+        )
 
-        key_x, key_y = self._foot_position(track)
-        seconds = offset / fps
-        return (
-            float((key_x - earlier_in_key_frame[0]) / seconds),
-            float((key_y - earlier_in_key_frame[1]) / seconds),
+        return PlayerSnapshot(
+            track_id=track.id,
+            team=teams.get(track.id),
+            bounding_box=track.bounding_box,
+            foot_position=foot_position(track),
+            movement=movement,
+            trail=[(float(point[0]), float(point[1])) for _, point in trail],
         )

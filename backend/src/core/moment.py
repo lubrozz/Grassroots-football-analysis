@@ -29,6 +29,7 @@ class PlayerSnapshot:
     bounding_box: BoundingBox
     foot_position: tuple[float, float]  # (x, y) in key-frame pixels
     movement: tuple[float, float] | None  # Pixels per second, camera motion removed
+    trail: list[tuple[float, float]]  # Foot positions in key-frame pixels, newest first
 
 
 @dataclass(frozen=True)
