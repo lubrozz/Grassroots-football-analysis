@@ -57,3 +57,17 @@ INPUT_VIDEO = INPUT_DIR / "u16-women-goal.mp4"
 OUTPUT_VIDEO_SUFFIX = "_annotated_teamAssignmentTest"
 OUTPUT_VIDEO_CODEC = "mp4v"
 PROGRESS_LOG_EVERY_N_FRAMES = 100
+
+
+#
+# Moment analysis
+#
+MOMENT_TIMESTAMPS = [
+    "0:06",
+    "0:11.5",
+]  # Example moments in format a coach would write them down (minutes:seconds). These will be converted to seconds in the code.
+MOMENT_SECONDS_BEFORE = 2.0  # Seconds before the moment to include in analysis
+MOMENT_SECONDS_AFTER = 0.5  # Seconds after the moment to include in analysis (mostly extra observations for team vote)
+MOMENT_MOVEMENT_SECONDS = (
+    0.5  # Seconds to look back for movement estimation (for player movement arrows)
+)
