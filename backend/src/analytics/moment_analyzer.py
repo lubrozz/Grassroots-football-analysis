@@ -126,7 +126,7 @@ class MomentAnalyzer:
             key_index,
             tracks_by_frame,
             camera_transforms,
-            max_offset=int(self._movement_seconds * fps),
+            max_offset=max_offset,
             max_step_heights=self._max_step_heights,
         )
         movement = velocity_from_trail(
