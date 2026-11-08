@@ -48,8 +48,17 @@ class VideoLoader:
 
         return frame
 
+    def seek(self, frame_index: int) -> None:
+        """
+        Seeks to a specific frame in the video.
+        """
+        self._capture.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+
     def reset(self) -> None:
-        self._capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        """
+        Resets the video to the beginning.
+        """
+        self.seek(0)
 
     def close(self) -> None:
         if self._capture.isOpened():

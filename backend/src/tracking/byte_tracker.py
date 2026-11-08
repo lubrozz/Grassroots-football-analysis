@@ -22,6 +22,13 @@ class ByteTracker:
             3, dtype=np.float32
         )  # Reference -> Current frame
 
+    @property
+    def camera_transform(self) -> np.ndarray:
+        """
+        Returns the current camera transform matrix.
+        """
+        return self._camera_transform.copy()
+
     def update(
         self, detections: list[Detection], camera_motion: np.ndarray | None = None
     ) -> list[Track]:
